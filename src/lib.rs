@@ -116,9 +116,6 @@
 //! <!-- ENDREADME -->
 
 #[macro_use]
-extern crate quick_error;
-
-#[macro_use]
 mod sugar;
 #[macro_use]
 pub mod fork_test;

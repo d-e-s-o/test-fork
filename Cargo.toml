@@ -16,5 +16,4 @@ fork-like interface.
 """
 
 [dependencies]
-quick-error = "1.2"
 tempfile = "3.0"
