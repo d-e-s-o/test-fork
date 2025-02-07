@@ -1,0 +1,13 @@
+[package]
+name = "test-fork-core"
+version = "0.0.0"
+authors = ["Daniel Mueller <deso@posteo.net>"]
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/d-e-s-o/test-fork"
+description = """
+Core fork logic of test-fork.
+"""
+
+[dependencies]
+tempfile = "3.0"

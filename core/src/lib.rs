@@ -52,7 +52,7 @@
 //! [`rusty_fork_test!`](macro.rusty_fork_test.html) macro.
 //!
 //! ```rust
-//! use test_fork::rusty_fork_test;
+//! use test_fork_core::rusty_fork_test;
 //!
 //! rusty_fork_test! {
 //! # /* NOREADME

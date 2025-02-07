@@ -22,7 +22,7 @@ use crate::child_wrapper::ChildWrapper;
 /// functions.
 ///
 /// ```
-/// use test_fork::rusty_fork_test;
+/// use test_fork_core::rusty_fork_test;
 ///
 /// rusty_fork_test! {
 /// # /*

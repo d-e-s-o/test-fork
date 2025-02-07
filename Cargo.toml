@@ -1,3 +1,10 @@
+[workspace]
+members = [
+  ".",
+  "core",
+  "macros",
+]
+
 [package]
 name = "test-fork"
 version = "0.0.0"
@@ -21,4 +28,5 @@ A library for running tests in separate processes.
 """
 
 [dependencies]
-tempfile = "3.0"
+test-fork-core = { version = "0.1.0", path = "core" }
+test-fork-macros = { version = "0.1.0", path = "macros" }
