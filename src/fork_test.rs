@@ -40,37 +40,9 @@ use crate::child_wrapper::ChildWrapper;
 ///
 /// Each test will be run in its own process. If the subprocess exits
 /// unsuccessfully for any reason, including due to signals, the test fails.
-///
-/// It is also possible to specify a timeout which is applied to all tests in
-/// the block, like so:
-///
-/// ```
-/// use rusty_forkfork::rusty_fork_test;
-///
-/// rusty_fork_test! {
-///     #![rusty_fork(timeout_ms = 1000)]
-/// # /*
-///     #[test]
-/// # */
-///     fn my_test() {
-///         do_some_expensive_computation();
-///     }
-///
-///     // more tests...
-/// }
-/// # fn do_some_expensive_computation() { }
-/// # fn main() { my_test(); }
-/// ```
-///
-/// If any individual test takes more than the given timeout, the child is
-/// terminated and the test panics.
-///
-/// Using the timeout feature requires the `timeout` feature for this crate to
-/// be enabled (which it is by default).
 #[macro_export]
 macro_rules! rusty_fork_test {
-    (#![rusty_fork(timeout_ms = $timeout:expr)]
-     $(
+    ($(
          $(#[$meta:meta])*
          fn $test_name:ident() $( -> $test_return:ty )? $body:block
     )*) => { $(
@@ -83,7 +55,7 @@ macro_rules! rusty_fork_test {
 
             fn supervise_fn(child: &mut $crate::ChildWrapper,
                             _file: &mut ::std::fs::File) {
-                $crate::fork_test::supervise_child(child, $timeout)
+                $crate::fork_test::supervise_child(child)
             }
             let supervise:
                 fn (&mut $crate::ChildWrapper, &mut ::std::fs::File) =
@@ -96,17 +68,6 @@ macro_rules! rusty_fork_test {
                 supervise, body).expect("forking test failed")
         }
     )* };
-
-    ($(
-         $(#[$meta:meta])*
-         fn $test_name:ident() $( -> $test_return:ty )? $body:block
-    )*) => {
-        rusty_fork_test! {
-            #![rusty_fork(timeout_ms = 0)]
-
-            $($(#[$meta])* fn $test_name() $( -> $test_return )?  $body)*
-        }
-    };
 }
 
 /// Given the unqualified name of a `#[test]` function, produce a
@@ -130,17 +91,13 @@ macro_rules! rusty_fork_test_name {
 
 #[allow(missing_docs)]
 #[doc(hidden)]
-pub fn supervise_child(child: &mut ChildWrapper, timeout_ms: u64) {
-    if timeout_ms > 0 {
-        wait_timeout(child, timeout_ms)
-    } else {
-        let status = child.wait().expect("failed to wait for child");
-        assert!(
-            status.success(),
-            "child exited unsuccessfully with {}",
-            status
-        );
-    }
+pub fn supervise_child(child: &mut ChildWrapper) {
+    let status = child.wait().expect("failed to wait for child");
+    assert!(
+        status.success(),
+        "child exited unsuccessfully with {}",
+        status
+    );
 }
 
 #[allow(missing_docs)]
@@ -152,33 +109,6 @@ pub fn no_configure_child(_child: &mut Command) {}
 /// test harness.
 pub fn fix_module_path(path: &str) -> &str {
     path.find("::").map(|ix| &path[ix + 2..]).unwrap_or(path)
-}
-
-#[cfg(feature = "timeout")]
-fn wait_timeout(child: &mut ChildWrapper, timeout_ms: u64) {
-    use std::time::Duration;
-
-    let timeout = Duration::from_millis(timeout_ms);
-    let status = child
-        .wait_timeout(timeout)
-        .expect("failed to wait for child");
-    if let Some(status) = status {
-        assert!(
-            status.success(),
-            "child exited unsuccessfully with {}",
-            status
-        );
-    } else {
-        panic!("child process exceeded {} ms timeout", timeout_ms);
-    }
-}
-
-#[cfg(not(feature = "timeout"))]
-fn wait_timeout(_: &mut ChildWrapper, _: u64) {
-    panic!(
-        "Using the timeout feature of rusty_fork_test! requires \
-            enabling the `timeout` feature on the rusty-fork crate."
-    );
 }
 
 #[cfg(test)]
@@ -204,24 +134,6 @@ mod test {
         #[should_panic]
         fn aborting_child() {
             ::std::process::abort();
-        }
-    }
-
-    rusty_fork_test! {
-        #![rusty_fork(timeout_ms = 1000)]
-
-        #[test]
-        #[cfg(feature = "timeout")]
-        fn timeout_passes() { }
-
-        #[test]
-        #[should_panic]
-        #[cfg(feature = "timeout")]
-        fn timeout_fails() {
-            println!("hello from child");
-            ::std::thread::sleep(
-                ::std::time::Duration::from_millis(10000));
-            println!("goodbye from child");
         }
     }
 }

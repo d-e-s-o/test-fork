@@ -10,11 +10,6 @@
 use std::fmt;
 use std::io;
 use std::process::{Child, Output};
-#[cfg(feature = "timeout")]
-use std::time::Duration;
-
-#[cfg(feature = "timeout")]
-use wait_timeout::ChildExt;
 
 /// Wraps `std::process::ExitStatus`. Historically, this was due to the
 /// `wait_timeout` crate having its own `ExitStatus` type.
@@ -233,23 +228,5 @@ impl ChildWrapper {
         }
 
         self.child.wait_with_output()
-    }
-
-    /// Wait for the child to exit, but only up to the given maximum duration.
-    ///
-    /// If the process has already been reaped, returns its exit status
-    /// immediately. Otherwise, if the process terminates within the duration,
-    /// returns `Ok(Sone(..))`, or `Ok(None)` otherwise.
-    ///
-    /// This is only present if the "timeout" feature is enabled.
-    #[cfg(feature = "timeout")]
-    pub fn wait_timeout(&mut self, dur: Duration) -> io::Result<Option<ExitStatusWrapper>> {
-        if let Some(status) = self.exit_status {
-            Ok(Some(status))
-        } else {
-            let status = self.child.wait_timeout(dur)?.map(ExitStatusWrapper::std);
-            self.exit_status = status;
-            Ok(status)
-        }
     }
 }
