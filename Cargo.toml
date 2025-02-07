@@ -1,18 +1,23 @@
 [package]
-name = "rusty-forkfork"
-version = "0.4.0"
-authors = ["Jason Lingle"]
-license = "MIT/Apache-2.0"
-readme = "README.md"
-repository = "https://github.com/oknozor/rusty-forkfork"
-documentation = "https://docs.rs/rusty-forkfork"
-keywords = ["testing", "process", "fork"]
-categories = ["development-tools::testing"]
+name = "test-fork"
+version = "0.0.0"
+authors = ["Daniel Mueller <deso@posteo.net>"]
 edition = "2021"
-
+license = "Apache-2.0 OR MIT"
+homepage = "https://github.com/d-e-s-o/test-fork"
+repository = "https://github.com/d-e-s-o/test-fork"
+readme = "README.md"
+categories = [
+  "development-tools::testing",
+  "development-tools",
+]
+keywords = [
+  "testing",
+  "process",
+  "fork",
+]
 description = """
-Cross-platform library for running Rust tests in sub-processes using a
-fork-like interface.
+A library for running tests in separate processes.
 """
 
 [dependencies]
