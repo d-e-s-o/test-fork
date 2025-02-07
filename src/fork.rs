@@ -224,17 +224,16 @@ fn fork_impl<E: Debug, T: TestExitStatus<E>>(
             .map(ChildWrapper::new)
             .map(|p| KillOnDrop(p, file))?;
 
-        let ret = in_parent(&mut child.0, &mut child.1);
+        let () = in_parent(&mut child.0, &mut child.1);
 
-        Ok(ret)
+        Ok(())
     }
 }
 
 fn id_str<ID: Hash>(id: ID) -> String {
     let mut hasher = fnv::FnvHasher::default();
     id.hash(&mut hasher);
-
-    return format!(":{:016X}", hasher.finish());
+    format!(":{:016X}", hasher.finish())
 }
 
 #[cfg(test)]
@@ -377,7 +376,7 @@ mod test {
 
     #[test]
     fn child_aborted_if_panics() {
-        let status = fork(
+        let status = fork::<_, _, _, _, _, (), _>(
             "fork::test::child_aborted_if_panics",
             rusty_fork_id!(),
             |_| (),

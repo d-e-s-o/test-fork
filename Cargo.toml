@@ -8,7 +8,7 @@ repository = "https://github.com/oknozor/rusty-forkfork"
 documentation = "https://docs.rs/rusty-forkfork"
 keywords = ["testing", "process", "fork"]
 categories = ["development-tools::testing"]
-edition = "2018"
+edition = "2021"
 
 description = """
 Cross-platform library for running Rust tests in sub-processes using a

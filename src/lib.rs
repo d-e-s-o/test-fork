@@ -14,26 +14,27 @@
 //! There are a number of reasons to want to run some tests in isolated
 //! processes:
 //!
-//! - When tests share a process, if any test causes the process to abort,
-//! segfault, overflow the stack, etc., the entire test runner process dies. If
-//! the test is in a subprocess, only the subprocess dies and the test runner
-//! simply fails the test.
+//! - When tests share a process, if any test causes the process to
+//!   abort, segfault, overflow the stack, etc., the entire test runner
+//!   process dies. If the test is in a subprocess, only the subprocess
+//!   dies and the test runner simply fails the test.
 //!
-//! - Isolating a test to a subprocess makes it possible to add a timeout to
-//! the test and forcibly terminate it and produce a normal test failure.
+//! - Isolating a test to a subprocess makes it possible to add a
+//!   timeout to the test and forcibly terminate it and produce a normal
+//!   test failure.
 //!
-//! - Tests which need to interact with some inherently global property, such
-//! as the current working directory, can do so without interfering with other
-//! tests.
+//! - Tests which need to interact with some inherently global property,
+//!   such as the current working directory, can do so without
+//!   interfering with other tests.
 //!
 //! This crate itself provides two things:
 //!
-//! - The [`rusty_fork_test!`](macro.rusty_fork_test.html) macro, which is a
-//! simple way to wrap standard Rust tests to be run in subprocesses with
-//! optional timeouts.
+//! - The [`rusty_fork_test!`](macro.rusty_fork_test.html) macro, which
+//!   is a simple way to wrap standard Rust tests to be run in
+//!   subprocesses with optional timeouts.
 //!
-//! - The [`fork`](fn.fork.html) function which can be used as a building block
-//! to make other types of process isolation strategies.
+//! - The [`fork`](fn.fork.html) function which can be used as a
+//!   building block to make other types of process isolation strategies.
 //!
 //! ## Quick Start
 //!
@@ -75,11 +76,12 @@
 //! Unix-style process forking isn't really viable within the standard Rust
 //! test environment for a number of reasons.
 //!
-//! - While true process forking can be done on Windows, it's neither fast nor
-//! reliable.
+//! - While true process forking can be done on Windows, it's neither
+//!   fast nor reliable.
 //!
-//! - The Rust test environment is multi-threaded, so attempting to do anything
-//! non-trivial after a process fork would result in undefined behaviour.
+//! - The Rust test environment is multi-threaded, so attempting to do
+//!   anything non-trivial after a process fork would result in
+//!   undefined behavior.
 //!
 //! Rusty-fork instead works by _spawning_ a fresh instance of the current
 //! process, after adjusting the command-line to ensure that only the desired
@@ -95,7 +97,7 @@
 //! user. If any unknown flags are encountered, forking will fail. Please do
 //! not hesitate to file
 //! [issues](https://github.com/AltSysrq/rusty-fork/issues) if rusty-fork fails
-//! to recognise any valid flags passed to the test runner.
+//! to recognize any valid flags passed to the test runner.
 //!
 //! It is possible to inform rusty-fork of new flags without patching by
 //! setting environment variables. For example, if a new `--frob-widgets` flag
