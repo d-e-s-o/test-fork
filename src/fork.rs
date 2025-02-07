@@ -10,8 +10,12 @@
 use std::env;
 use std::fmt::Debug;
 use std::fs;
-use std::hash::{Hash, Hasher};
-use std::io::{self, BufRead, Seek};
+use std::hash::DefaultHasher;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::io;
+use std::io::BufRead;
+use std::io::Seek;
 use std::panic;
 use std::process;
 
@@ -231,7 +235,7 @@ fn fork_impl<E: Debug, T: TestExitStatus<E>>(
 }
 
 fn id_str<ID: Hash>(id: ID) -> String {
-    let mut hasher = fnv::FnvHasher::default();
+    let mut hasher = DefaultHasher::default();
     id.hash(&mut hasher);
     format!(":{:016X}", hasher.finish())
 }

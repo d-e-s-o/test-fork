@@ -16,6 +16,5 @@ fork-like interface.
 """
 
 [dependencies]
-fnv = "1.0"
 quick-error = "1.2"
 tempfile = "3.0"
