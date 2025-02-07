@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    branches: main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    name: Perform release
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Setup cargo
+        run: |
+          cargo install cargo-bump
+          cargo login ${{ secrets.CARGO_TOKEN }}
+
+      # version publish steps are managed by cocogitto, see `cog.toml`
+      # and https://github.com/oknozor/cocogitto-action for more info
+      - name: Semver release
+        id: release
+        uses: oknozor/cocogitto-action@v2
+        with:
+          release: true
+          check-latest-tag-only: true
+
+      - name: Generate Changelog
+        run: |
+          run: echo "::set-output name=version::${{ steps.release.outputs.version }}"
+          cog changelog --at ${{ steps.release.outputs.version }} -t full_hash > GITHUB_CHANGELOG.md
+
+      - name: Upload github release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: GITHUB_CHANGELOG.md
+          tag_name: ${{ steps.release.outputs.version }}
