@@ -9,7 +9,8 @@
 
 use std::fmt;
 use std::io;
-use std::process::{Child, Output};
+use std::process::Child;
+use std::process::Output;
 
 /// Wraps `std::process::ExitStatus`. Historically, this was due to the
 /// `wait_timeout` crate having its own `ExitStatus` type.

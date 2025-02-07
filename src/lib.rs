@@ -124,7 +124,9 @@ mod cmdline;
 mod error;
 mod fork;
 
-pub use crate::child_wrapper::{ChildWrapper, ExitStatusWrapper};
-pub use crate::error::{Error, Result};
+pub use crate::child_wrapper::ChildWrapper;
+pub use crate::child_wrapper::ExitStatusWrapper;
+pub use crate::error::Error;
+pub use crate::error::Result;
 pub use crate::fork::fork;
 pub use crate::sugar::RustyForkId;
