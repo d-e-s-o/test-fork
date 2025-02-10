@@ -13,6 +13,7 @@ edition = "2021"
 license = "Apache-2.0 OR MIT"
 homepage = "https://github.com/d-e-s-o/test-fork"
 repository = "https://github.com/d-e-s-o/test-fork"
+documentation = "https://docs.rs/test-fork"
 readme = "README.md"
 categories = [
   "development-tools::testing",
