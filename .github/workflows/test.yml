@@ -50,3 +50,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --no-deps --all-targets --all-features -- -A unknown_lints -D warnings
+  rustdoc:
+    name: Generate documentation
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: '-D warnings -D rustdoc::broken_intra_doc_links'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc --workspace --no-deps

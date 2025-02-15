@@ -15,6 +15,37 @@ use syn::ItemFn;
 use syn::Result;
 
 
+/// A procedural macro for running a test in a separate process.
+///
+/// The attribute can be used to associate one or more tags with a test.
+/// The attribute should be placed before the eventual `#[test]`
+/// attribute.
+///
+/// # Example
+///
+/// Use the attribute for all tests in scope:
+/// ```rust,ignore
+/// use test_fork::test;
+///
+/// #[test]
+/// fn test1() {
+///   assert_eq!(2 + 2, 4);
+/// }
+/// ```
+///
+/// The attribute also supports an alternative syntax that nests more
+/// easily with other custom `#[test]` attributes and which allows for
+/// easier annotation of individual tests (e.g., if only a sub-set is
+/// meant to be run in separate processes):
+/// ```rust,ignore
+/// use test_fork::test as fork;
+///
+/// #[fork]
+/// #[test]
+/// fn test2() {
+///   assert_eq!(2 + 3, 5);
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
