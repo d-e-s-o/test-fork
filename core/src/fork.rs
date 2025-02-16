@@ -8,14 +8,14 @@
 // except according to those terms.
 
 use std::env;
-use std::fs;
 use std::io;
 use std::io::BufRead;
-use std::io::Seek;
+use std::io::Read;
 use std::panic;
 use std::process;
 use std::process::Child;
 use std::process::ExitCode;
+use std::process::Stdio;
 use std::process::Termination;
 
 use crate::cmdline;
@@ -35,10 +35,6 @@ const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
 /// same fork point more than once in a single execution sequence of a child
 /// process is not (e.g., putting this call in a recursive function) and
 /// results in unspecified behaviour.
-///
-/// The child's output is buffered into an anonymous temporary file. Before
-/// this call returns, this output is copied to the parent's standard output
-/// (passing through the redirect mechanism Rust test uses).
 ///
 /// `test_name` must exactly match the full path of the test function being
 /// run.
@@ -137,9 +133,7 @@ fn fork_impl<T: Termination>(
             panic!("test-fork: Not forking due to >=16 levels of recursion");
         }
 
-        let file = tempfile::tempfile()?;
-
-        struct KillOnDrop(Child, fs::File);
+        struct KillOnDrop(Child);
         impl Drop for KillOnDrop {
             fn drop(&mut self) {
                 // Kill the child if it hasn't exited yet
@@ -151,26 +145,40 @@ fn fork_impl<T: Termination>(
                 // output really is text, so work on that assumption and read
                 // line-by-line, converting lossily into UTF-8 so we can
                 // println!() it.
-                let _ = self.1.seek(io::SeekFrom::Start(0));
 
-                let mut buf = Vec::new();
-                let mut br = io::BufReader::new(&mut self.1);
-                loop {
-                    // We can't use read_line() or lines() since they break if
-                    // there's any non-UTF-8 output at all. \n occurs at the
-                    // end of the line endings on all major platforms, so we
-                    // can just use that as a delimiter.
-                    if br.read_until(b'\n', &mut buf).is_err() {
-                        break;
-                    }
-                    if buf.is_empty() {
-                        break;
-                    }
+                fn drain(read: &mut dyn Read, stderr: bool) {
+                    let mut buf = Vec::new();
+                    let mut br = io::BufReader::new(read);
+                    loop {
+                        // We can't use read_line() or lines() since they break if
+                        // there's any non-UTF-8 output at all. \n occurs at the
+                        // end of the line endings on all major platforms, so we
+                        // can just use that as a delimiter.
+                        if br.read_until(b'\n', &mut buf).is_err() {
+                            break;
+                        }
+                        if buf.is_empty() {
+                            break;
+                        }
 
-                    // not println!() because we already have a line ending
-                    // from above.
-                    print!("{}", String::from_utf8_lossy(&buf));
-                    buf.clear();
+                        // not println!() because we already have a line ending
+                        // from above.
+                        let s = String::from_utf8_lossy(&buf);
+                        if stderr {
+                            eprint!("{s}");
+                        } else {
+                            print!("{s}");
+                        }
+                        buf.clear();
+                    }
+                }
+
+                if let Some(stdout) = self.0.stdout.as_mut() {
+                    let () = drain(stdout, false);
+                }
+
+                if let Some(stderr) = self.0.stderr.as_mut() {
+                    let () = drain(stderr, true);
                 }
             }
         }
@@ -183,12 +191,12 @@ fn fork_impl<T: Termination>(
             .args(cmdline::RUN_TEST_ARGS)
             .arg(test_name)
             .env(OCCURS_ENV, &occurs)
-            .stdin(process::Stdio::null())
-            .stdout(file.try_clone()?)
-            .stderr(file.try_clone()?);
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
         process_modifier(&mut command);
 
-        let mut child = command.spawn().map(|p| KillOnDrop(p, file))?;
+        let mut child = command.spawn().map(KillOnDrop)?;
         let () = in_parent(&mut child.0);
 
         Ok(())
@@ -211,13 +219,11 @@ mod test {
     }
 
     fn capturing_output(cmd: &mut process::Command) {
-        cmd.stdout(process::Stdio::piped())
-            .stderr(process::Stdio::inherit());
+        cmd.stdout(Stdio::piped()).stderr(Stdio::inherit());
     }
 
     fn inherit_output(cmd: &mut process::Command) {
-        cmd.stdout(process::Stdio::inherit())
-            .stderr(process::Stdio::inherit());
+        cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     }
 
     fn wait_for_child_output(child: &mut Child) -> String {
