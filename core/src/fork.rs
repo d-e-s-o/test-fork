@@ -85,7 +85,7 @@ pub fn fork<MODIFIER, PARENT, CHILD, R, T>(
 ) -> Result<R>
 where
     MODIFIER: FnOnce(&mut process::Command),
-    PARENT: FnOnce(&mut Child, &mut fs::File) -> R,
+    PARENT: FnOnce(&mut Child) -> R,
     T: Termination,
     CHILD: FnOnce() -> T,
 {
@@ -100,7 +100,7 @@ where
         test_name,
         fork_id,
         &mut |cmd| process_modifier.take().unwrap()(cmd),
-        &mut |child, file| return_value = Some(in_parent.take().unwrap()(child, file)),
+        &mut |child| return_value = Some(in_parent.take().unwrap()(child)),
         &mut || in_child.take().unwrap()(),
     )
     .map(|_| return_value.unwrap())
@@ -110,7 +110,7 @@ fn fork_impl<T: Termination>(
     test_name: &str,
     fork_id: &str,
     process_modifier: &mut dyn FnMut(&mut process::Command),
-    in_parent: &mut dyn FnMut(&mut Child, &mut fs::File),
+    in_parent: &mut dyn FnMut(&mut Child),
     in_child: &mut dyn FnMut() -> T,
 ) -> Result<()> {
     let mut occurs = env::var(OCCURS_ENV).unwrap_or_else(|_| String::new());
@@ -189,7 +189,7 @@ fn fork_impl<T: Termination>(
         process_modifier(&mut command);
 
         let mut child = command.spawn().map(|p| KillOnDrop(p, file))?;
-        let () = in_parent(&mut child.0, &mut child.1);
+        let () = in_parent(&mut child.0);
 
         Ok(())
     }
@@ -220,7 +220,7 @@ mod test {
             .stderr(process::Stdio::inherit());
     }
 
-    fn wait_for_child_output(child: &mut Child, _file: &mut fs::File) -> String {
+    fn wait_for_child_output(child: &mut Child) -> String {
         let mut output = String::new();
         child
             .stdout
@@ -232,7 +232,7 @@ mod test {
         output
     }
 
-    fn wait_for_child(child: &mut Child, _file: &mut fs::File) {
+    fn wait_for_child(child: &mut Child) {
         assert!(child.wait().unwrap().success());
     }
 
@@ -242,7 +242,7 @@ mod test {
             "fork::test::fork_basically_works",
             fork_id!(),
             |_| (),
-            |child, _| child.wait().unwrap(),
+            |child| child.wait().unwrap(),
             || println!("hello from child"),
         )
         .unwrap();
@@ -283,7 +283,7 @@ mod test {
                     "fork::test::child_killed_if_parent_exits_first",
                     fork_id!(),
                     inherit_output,
-                    |_, _| (),
+                    |_| (),
                     || {
                         sleep(1_000);
                         println!("hello from child");
@@ -314,7 +314,7 @@ mod test {
                     "fork::test::child_killed_if_parent_panics_first",
                     fork_id!(),
                     inherit_output,
-                    |_, _| panic!("testing a panic, nothing to see here"),
+                    |_| panic!("testing a panic, nothing to see here"),
                     || {
                         sleep(1_000);
                         println!("hello from child");
@@ -340,7 +340,7 @@ mod test {
             "fork::test::child_aborted_if_panics",
             fork_id!(),
             |_| (),
-            |child, _| child.wait().unwrap(),
+            |child| child.wait().unwrap(),
             || panic!("testing a panic, nothing to see here"),
         )
         .unwrap();
