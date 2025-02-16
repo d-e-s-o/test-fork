@@ -54,7 +54,7 @@ macro_rules! fork_test {
 
             fn supervise_fn(child: &mut std::process::Child,
                             _file: &mut ::std::fs::File) {
-                $crate::fork_test::supervise_child(child)
+                $crate::supervise_child(child)
             }
             let supervise:
                 fn (&mut std::process::Child, &mut ::std::fs::File) =
@@ -63,7 +63,7 @@ macro_rules! fork_test {
             $crate::fork(
                 $crate::fork_test_name!($test_name),
                 $crate::fork_id!(),
-                $crate::fork_test::no_configure_child,
+                $crate::no_configure_child,
                 supervise, body).expect("forking test failed")
         }
     )* };
@@ -80,16 +80,11 @@ macro_rules! fork_test {
 #[macro_export]
 macro_rules! fork_test_name {
     ($function_name:ident) => {
-        $crate::fork_test::fix_module_path(concat!(
-            module_path!(),
-            "::",
-            stringify!($function_name)
-        ))
+        $crate::fix_module_path(concat!(module_path!(), "::", stringify!($function_name)))
     };
 }
 
 #[allow(missing_docs)]
-#[doc(hidden)]
 pub fn supervise_child(child: &mut Child) {
     let status = child.wait().expect("failed to wait for child");
     assert!(
@@ -100,7 +95,6 @@ pub fn supervise_child(child: &mut Child) {
 }
 
 #[allow(missing_docs)]
-#[doc(hidden)]
 pub fn no_configure_child(_child: &mut Command) {}
 
 /// Transform a string representing a qualified path as generated via

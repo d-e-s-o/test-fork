@@ -223,10 +223,13 @@ fn fork_impl<E: Debug, T: TestExitStatus<E>>(
 
 #[cfg(test)]
 mod test {
+    use super::*;
+
     use std::io::Read;
     use std::thread;
 
-    use super::*;
+    use crate::fork_id;
+
 
     fn sleep(ms: u64) {
         thread::sleep(::std::time::Duration::from_millis(ms));

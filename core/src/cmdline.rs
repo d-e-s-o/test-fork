@@ -228,6 +228,9 @@ pub(crate) static RUN_TEST_ARGS: &[&str] = &[
 mod test {
     use super::*;
 
+    use crate::fork_test;
+
+
     fn strip(cmdline: &str) -> Result<String> {
         strip_cmdline(cmdline.split_whitespace().map(|s| s.to_owned())).map(|strs| strs.join(" "))
     }
