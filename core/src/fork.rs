@@ -18,8 +18,8 @@ use std::io::BufRead;
 use std::io::Seek;
 use std::panic;
 use std::process;
+use std::process::Child;
 
-use crate::child_wrapper::ChildWrapper;
 use crate::cmdline;
 use crate::error::*;
 
@@ -119,7 +119,7 @@ pub fn fork<ID, MODIFIER, PARENT, CHILD, R, T, E: Debug>(
 where
     ID: Hash,
     MODIFIER: FnOnce(&mut process::Command),
-    PARENT: FnOnce(&mut ChildWrapper, &mut fs::File) -> R,
+    PARENT: FnOnce(&mut Child, &mut fs::File) -> R,
     T: TestExitStatus<E>,
     CHILD: FnOnce() -> T,
 {
@@ -146,7 +146,7 @@ fn fork_impl<E: Debug, T: TestExitStatus<E>>(
     test_name: &str,
     fork_id: String,
     process_modifier: &mut dyn FnMut(&mut process::Command),
-    in_parent: &mut dyn FnMut(&mut ChildWrapper, &mut fs::File),
+    in_parent: &mut dyn FnMut(&mut Child, &mut fs::File),
     in_child: &mut dyn FnMut() -> T,
 ) -> Result<()> {
     let mut occurs = env::var(OCCURS_ENV).unwrap_or_else(|_| String::new());
@@ -174,7 +174,7 @@ fn fork_impl<E: Debug, T: TestExitStatus<E>>(
 
         let file = tempfile::tempfile()?;
 
-        struct KillOnDrop(ChildWrapper, fs::File);
+        struct KillOnDrop(Child, fs::File);
         impl Drop for KillOnDrop {
             fn drop(&mut self) {
                 // Kill the child if it hasn't exited yet
@@ -223,11 +223,7 @@ fn fork_impl<E: Debug, T: TestExitStatus<E>>(
             .stderr(file.try_clone()?);
         process_modifier(&mut command);
 
-        let mut child = command
-            .spawn()
-            .map(ChildWrapper::new)
-            .map(|p| KillOnDrop(p, file))?;
-
+        let mut child = command.spawn().map(|p| KillOnDrop(p, file))?;
         let () = in_parent(&mut child.0, &mut child.1);
 
         Ok(())
@@ -252,8 +248,6 @@ mod test {
     }
 
     fn capturing_output(cmd: &mut process::Command) {
-        // Only actually capture stdout since we can't use
-        // wait_with_output() since it for some reason consumes the `Child`.
         cmd.stdout(process::Stdio::piped())
             .stderr(process::Stdio::inherit());
     }
@@ -263,10 +257,9 @@ mod test {
             .stderr(process::Stdio::inherit());
     }
 
-    fn wait_for_child_output(child: &mut ChildWrapper, _file: &mut fs::File) -> String {
+    fn wait_for_child_output(child: &mut Child, _file: &mut fs::File) -> String {
         let mut output = String::new();
         child
-            .inner_mut()
             .stdout
             .as_mut()
             .unwrap()
@@ -276,7 +269,7 @@ mod test {
         output
     }
 
-    fn wait_for_child(child: &mut ChildWrapper, _file: &mut fs::File) {
+    fn wait_for_child(child: &mut Child, _file: &mut fs::File) {
         assert!(child.wait().unwrap().success());
     }
 

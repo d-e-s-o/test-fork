@@ -12,9 +12,8 @@
 //! Some functionality in this module is useful to other implementors and
 //! unlikely to change. This subset is documented and considered stable.
 
+use std::process::Child;
 use std::process::Command;
-
-use crate::child_wrapper::ChildWrapper;
 
 /// Run Rust tests in subprocesses.
 ///
@@ -53,12 +52,12 @@ macro_rules! rusty_fork_test {
             fn body_fn() $( -> $test_return )? $body
             let body: fn () $( -> $test_return )? = body_fn;
 
-            fn supervise_fn(child: &mut $crate::ChildWrapper,
+            fn supervise_fn(child: &mut std::process::Child,
                             _file: &mut ::std::fs::File) {
                 $crate::fork_test::supervise_child(child)
             }
             let supervise:
-                fn (&mut $crate::ChildWrapper, &mut ::std::fs::File) =
+                fn (&mut std::process::Child, &mut ::std::fs::File) =
                 supervise_fn;
 
             $crate::fork(
@@ -91,7 +90,7 @@ macro_rules! rusty_fork_test_name {
 
 #[allow(missing_docs)]
 #[doc(hidden)]
-pub fn supervise_child(child: &mut ChildWrapper) {
+pub fn supervise_child(child: &mut Child) {
     let status = child.wait().expect("failed to wait for child");
     assert!(
         status.success(),

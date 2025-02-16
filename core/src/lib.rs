@@ -119,13 +119,10 @@
 mod sugar;
 #[macro_use]
 pub mod fork_test;
-mod child_wrapper;
 mod cmdline;
 mod error;
 mod fork;
 
-pub use crate::child_wrapper::ChildWrapper;
-pub use crate::child_wrapper::ExitStatusWrapper;
 pub use crate::error::Error;
 pub use crate::error::Result;
 pub use crate::fork::fork;
