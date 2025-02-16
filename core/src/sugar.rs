@@ -22,31 +22,29 @@ use std::hash::Hasher;
 /// This is usually the best thing to pass for the `fork_id` argument of
 /// [`fork`][crate::fork].
 ///
-/// The type of the expression this macro expands to is [`RustyForkId`].
+/// The type of the expression this macro expands to is [`ForkId`].
 #[macro_export]
 macro_rules! fork_id {
     () => {{
-        struct _RustyForkId;
-        &std::string::ToString::to_string(&$crate::RustyForkId::of(::std::any::TypeId::of::<
-            _RustyForkId,
-        >()))
+        struct _ForkId;
+        &std::string::ToString::to_string(&$crate::ForkId::of(::std::any::TypeId::of::<_ForkId>()))
     }};
 }
 
 
 /// The type of the value produced by [`fork_id!`].
 #[derive(Clone, Hash, PartialEq, Debug)]
-pub struct RustyForkId(TypeId);
+pub struct ForkId(TypeId);
 
-impl RustyForkId {
+impl ForkId {
     #[allow(missing_docs)]
     #[doc(hidden)]
     pub fn of(id: TypeId) -> Self {
-        RustyForkId(id)
+        ForkId(id)
     }
 }
 
-impl Display for RustyForkId {
+impl Display for ForkId {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         let mut hasher = DefaultHasher::default();
         self.0.hash(&mut hasher);
@@ -64,8 +62,8 @@ mod test {
     #[test]
     fn ids_for_same_type_are_equal() {
         struct UniqueType;
-        let id1 = RustyForkId::of(TypeId::of::<UniqueType>());
-        let id2 = RustyForkId::of(TypeId::of::<UniqueType>());
+        let id1 = ForkId::of(TypeId::of::<UniqueType>());
+        let id2 = ForkId::of(TypeId::of::<UniqueType>());
         assert_eq!(id1, id2);
         assert_eq!(id1.to_string(), id2.to_string());
     }

@@ -126,4 +126,4 @@ mod fork;
 pub use crate::error::Error;
 pub use crate::error::Result;
 pub use crate::fork::fork;
-pub use crate::sugar::RustyForkId;
+pub use crate::sugar::ForkId;

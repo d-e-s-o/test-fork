@@ -73,7 +73,7 @@ fn look_up_flag_from_table(flag: &str) -> Option<FlagType> {
 }
 
 pub(crate) fn env_var_for_flag(flag: &str) -> String {
-    let mut var = "RUSTY_FORK_FLAG_".to_owned();
+    let mut var = "TEST_FORK_FLAG_".to_owned();
     var.push_str(
         &flag
             .trim_start_matches('-')
@@ -272,10 +272,10 @@ mod test {
     rusty_fork_test! {
         #[test]
         fn define_args_via_env() {
-            env::set_var("RUSTY_FORK_FLAG_X", "pass");
-            env::set_var("RUSTY_FORK_FLAG_FOO", "pass-arg");
-            env::set_var("RUSTY_FORK_FLAG_BAR", "drop");
-            env::set_var("RUSTY_FORK_FLAG_BAZ", "drop-arg");
+            env::set_var("TEST_FORK_FLAG_X", "pass");
+            env::set_var("TEST_FORK_FLAG_FOO", "pass-arg");
+            env::set_var("TEST_FORK_FLAG_BAR", "drop");
+            env::set_var("TEST_FORK_FLAG_BAZ", "drop-arg");
 
             assert_eq!("-X", &strip("test -X foo").unwrap());
             assert_eq!("--foo bar", &strip("test --foo bar").unwrap());
