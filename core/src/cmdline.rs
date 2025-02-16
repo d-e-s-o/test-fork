@@ -269,7 +269,7 @@ mod test {
 
     // Subprocess so we can change the environment without affecting other
     // tests
-    rusty_fork_test! {
+    fork_test! {
         #[test]
         fn define_args_via_env() {
             env::set_var("TEST_FORK_FLAG_X", "pass");

@@ -2,5 +2,5 @@
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 #[doc(hidden)]
-pub use test_fork_core::rusty_fork_test;
+pub use test_fork_core::fork_test;
 pub use test_fork_macros::test;

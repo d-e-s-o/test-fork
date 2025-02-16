@@ -7,7 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! Support code for the `rusty_fork_test!` macro and similar.
+//! Support code for the `fork_test!` macro and similar.
 //!
 //! Some functionality in this module is useful to other implementors and
 //! unlikely to change. This subset is documented and considered stable.
@@ -21,9 +21,9 @@ use std::process::Command;
 /// functions.
 ///
 /// ```
-/// use test_fork_core::rusty_fork_test;
+/// use test_fork_core::fork_test;
 ///
-/// rusty_fork_test! {
+/// fork_test! {
 /// # /*
 ///     #[test]
 /// # */
@@ -40,7 +40,7 @@ use std::process::Command;
 /// Each test will be run in its own process. If the subprocess exits
 /// unsuccessfully for any reason, including due to signals, the test fails.
 #[macro_export]
-macro_rules! rusty_fork_test {
+macro_rules! fork_test {
     ($(
          $(#[$meta:meta])*
          fn $test_name:ident() $( -> $test_return:ty )? $body:block
@@ -61,7 +61,7 @@ macro_rules! rusty_fork_test {
                 supervise_fn;
 
             $crate::fork(
-                $crate::rusty_fork_test_name!($test_name),
+                $crate::fork_test_name!($test_name),
                 $crate::fork_id!(),
                 $crate::fork_test::no_configure_child,
                 supervise, body).expect("forking test failed")
@@ -73,12 +73,12 @@ macro_rules! rusty_fork_test {
 /// `&'static str` corresponding to the name of the test as filtered by the
 /// standard test harness.
 ///
-/// This is internally used by `rusty_fork_test!` but is made available since
+/// This is internally used by `fork_test!` but is made available since
 /// other test wrapping implementations will likely need it too.
 ///
 /// This does not currently produce a constant expression.
 #[macro_export]
-macro_rules! rusty_fork_test_name {
+macro_rules! fork_test_name {
     ($function_name:ident) => {
         $crate::fork_test::fix_module_path(concat!(
             module_path!(),
@@ -112,7 +112,7 @@ pub fn fix_module_path(path: &str) -> &str {
 
 #[cfg(test)]
 mod test {
-    rusty_fork_test! {
+    fork_test! {
         #[test]
         fn trivial() { }
 

@@ -20,7 +20,7 @@ use std::process::Child;
 use crate::cmdline;
 use crate::error::*;
 
-const OCCURS_ENV: &str = "RUSTY_FORK_OCCURS";
+const OCCURS_ENV: &str = "TEST_FORK_OCCURS";
 const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
 
 pub trait TestExitStatus<E: Debug> {
@@ -159,7 +159,7 @@ fn fork_impl<E: Debug, T: TestExitStatus<E>>(
     } else {
         // Prevent misconfiguration creating a fork bomb
         if occurs.len() > 16 * OCCURS_TERM_LENGTH {
-            panic!("rusty-fork: Not forking due to >=16 levels of recursion");
+            panic!("test-fork: Not forking due to >=16 levels of recursion");
         }
 
         let file = tempfile::tempfile()?;

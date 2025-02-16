@@ -100,7 +100,7 @@ fn try_test(attr: TokenStream, input_fn: ItemFn) -> Result<Tokens> {
     };
 
     let augmented_test = quote! {
-        ::test_fork::rusty_fork_test! {
+        ::test_fork::fork_test! {
             #inner_test
             #input_fn
         }
