@@ -53,10 +53,6 @@ impl TestExitStatus<()> for () {
 
 /// Simulate a process fork.
 ///
-/// The function documentation here only lists information unique to calling it
-/// directly; please see the crate documentation for more details on how the
-/// forking process works.
-///
 /// Since this is not a true process fork, the calling code must be structured
 /// to ensure that the child process, upon starting from the same entry point,
 /// also reaches this same `fork()` call. Recursive forks are supported; the
