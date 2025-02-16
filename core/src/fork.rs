@@ -285,7 +285,7 @@ mod test {
                     inherit_output,
                     |_| (),
                     || {
-                        sleep(1_000);
+                        sleep(100);
                         println!("hello from child");
                     },
                 )
@@ -294,7 +294,7 @@ mod test {
         )
         .unwrap();
 
-        sleep(2_000);
+        sleep(200);
         assert!(
             !output.contains("hello from child"),
             "Had unexpected output:\n{}",
@@ -316,7 +316,7 @@ mod test {
                     inherit_output,
                     |_| panic!("testing a panic, nothing to see here"),
                     || {
-                        sleep(1_000);
+                        sleep(100);
                         println!("hello from child");
                     }
                 )
@@ -326,7 +326,7 @@ mod test {
         )
         .unwrap();
 
-        sleep(2_000);
+        sleep(200);
         assert!(
             !output.contains("hello from child"),
             "Had unexpected output:\n{}",
