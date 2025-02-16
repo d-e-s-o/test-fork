@@ -7,7 +7,7 @@ members = [
 
 [package]
 name = "test-fork"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Daniel Mueller <deso@posteo.net>"]
 edition = "2021"
 license = "Apache-2.0 OR MIT"
@@ -29,5 +29,5 @@ A library for running tests in separate processes.
 """
 
 [dependencies]
-test-fork-core = { version = "0.1.0", path = "core" }
-test-fork-macros = { version = "0.1.0", path = "macros" }
+test-fork-core = { version = "=0.1.1", path = "core" }
+test-fork-macros = { version = "=0.1.1", path = "macros" }
