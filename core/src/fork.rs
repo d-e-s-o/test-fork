@@ -76,8 +76,8 @@ impl TestExitStatus<()> for () {
 /// `fork_id` is a unique identifier identifying this particular fork location.
 /// This *must* be stable across processes of the same executable; pointers are
 /// not suitable stable, and string constants may not be suitably unique. The
-/// [`rusty_fork_id!()`](macro.rusty_fork_id.html) macro is the recommended way
-/// to supply this parameter.
+/// [`fork_id!()`] macro is the recommended way to supply this
+/// parameter.
 ///
 /// If this is the parent process, `in_parent` is invoked, and the return value
 /// becomes the return value from this function. The callback is passed a
@@ -266,7 +266,7 @@ mod test {
     fn fork_basically_works() {
         let status = fork(
             "fork::test::fork_basically_works",
-            rusty_fork_id!(),
+            fork_id!(),
             |_| (),
             |child, _| child.wait().unwrap(),
             || println!("hello from child"),
@@ -279,13 +279,13 @@ mod test {
     fn child_output_captured_and_repeated() {
         let output = fork(
             "fork::test::child_output_captured_and_repeated",
-            rusty_fork_id!(),
+            fork_id!(),
             capturing_output,
             wait_for_child_output,
             || {
                 fork(
                     "fork::test::child_output_captured_and_repeated",
-                    rusty_fork_id!(),
+                    fork_id!(),
                     |_| (),
                     wait_for_child,
                     || println!("hello from child"),
@@ -301,13 +301,13 @@ mod test {
     fn child_killed_if_parent_exits_first() {
         let output = fork(
             "fork::test::child_killed_if_parent_exits_first",
-            rusty_fork_id!(),
+            fork_id!(),
             capturing_output,
             wait_for_child_output,
             || {
                 fork(
                     "fork::test::child_killed_if_parent_exits_first",
-                    rusty_fork_id!(),
+                    fork_id!(),
                     inherit_output,
                     |_, _| (),
                     || {
@@ -332,13 +332,13 @@ mod test {
     fn child_killed_if_parent_panics_first() {
         let output = fork(
             "fork::test::child_killed_if_parent_panics_first",
-            rusty_fork_id!(),
+            fork_id!(),
             capturing_output,
             wait_for_child_output,
             || {
                 assert!(panic::catch_unwind(panic::AssertUnwindSafe(|| fork(
                     "fork::test::child_killed_if_parent_panics_first",
-                    rusty_fork_id!(),
+                    fork_id!(),
                     inherit_output,
                     |_, _| panic!("testing a panic, nothing to see here"),
                     || {
@@ -364,7 +364,7 @@ mod test {
     fn child_aborted_if_panics() {
         let status = fork::<_, _, _, _, (), _>(
             "fork::test::child_aborted_if_panics",
-            rusty_fork_id!(),
+            fork_id!(),
             |_| (),
             |child, _| child.wait().unwrap(),
             || panic!("testing a panic, nothing to see here"),

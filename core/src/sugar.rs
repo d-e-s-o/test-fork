@@ -24,7 +24,7 @@ use std::hash::Hasher;
 ///
 /// The type of the expression this macro expands to is [`RustyForkId`].
 #[macro_export]
-macro_rules! rusty_fork_id {
+macro_rules! fork_id {
     () => {{
         struct _RustyForkId;
         &std::string::ToString::to_string(&$crate::RustyForkId::of(::std::any::TypeId::of::<
@@ -34,7 +34,7 @@ macro_rules! rusty_fork_id {
 }
 
 
-/// The type of the value produced by [`rusty_fork_id!`].
+/// The type of the value produced by [`fork_id!`].
 #[derive(Clone, Hash, PartialEq, Debug)]
 pub struct RustyForkId(TypeId);
 
@@ -72,8 +72,8 @@ mod test {
 
     #[test]
     fn ids_are_actually_distinct() {
-        let id1 = rusty_fork_id!();
-        let id2 = rusty_fork_id!();
+        let id1 = fork_id!();
+        let id2 = fork_id!();
         assert_ne!(id1, id2);
         assert_ne!(id1.to_string(), id2.to_string());
     }
