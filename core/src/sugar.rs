@@ -8,6 +8,12 @@
 // except according to those terms.
 
 use std::any::TypeId;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Result as FmtResult;
+use std::hash::DefaultHasher;
+use std::hash::Hash as _;
+use std::hash::Hasher;
 
 
 /// Produce a hashable identifier unique to the particular macro invocation
@@ -21,7 +27,9 @@ use std::any::TypeId;
 macro_rules! rusty_fork_id {
     () => {{
         struct _RustyForkId;
-        $crate::RustyForkId::of(::std::any::TypeId::of::<_RustyForkId>())
+        &std::string::ToString::to_string(&$crate::RustyForkId::of(::std::any::TypeId::of::<
+            _RustyForkId,
+        >()))
     }};
 }
 
@@ -38,6 +46,14 @@ impl RustyForkId {
     }
 }
 
+impl Display for RustyForkId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        let mut hasher = DefaultHasher::default();
+        self.0.hash(&mut hasher);
+        write!(f, ":{:016X}", hasher.finish())
+    }
+}
+
 
 #[cfg(test)]
 mod test {
@@ -51,10 +67,14 @@ mod test {
         let id1 = RustyForkId::of(TypeId::of::<UniqueType>());
         let id2 = RustyForkId::of(TypeId::of::<UniqueType>());
         assert_eq!(id1, id2);
+        assert_eq!(id1.to_string(), id2.to_string());
     }
 
     #[test]
     fn ids_are_actually_distinct() {
-        assert_ne!(rusty_fork_id!(), rusty_fork_id!());
+        let id1 = rusty_fork_id!();
+        let id2 = rusty_fork_id!();
+        assert_ne!(id1, id2);
+        assert_ne!(id1.to_string(), id2.to_string());
     }
 }

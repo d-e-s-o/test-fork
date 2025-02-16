@@ -10,9 +10,6 @@
 use std::env;
 use std::fmt::Debug;
 use std::fs;
-use std::hash::DefaultHasher;
-use std::hash::Hash;
-use std::hash::Hasher;
 use std::io;
 use std::io::BufRead;
 use std::io::Seek;
@@ -109,22 +106,19 @@ impl TestExitStatus<()> for () {
 /// executable.
 ///
 /// Panics if any argument to the current process is not valid UTF-8.
-pub fn fork<ID, MODIFIER, PARENT, CHILD, R, T, E: Debug>(
+pub fn fork<MODIFIER, PARENT, CHILD, R, T, E: Debug>(
     test_name: &str,
-    fork_id: ID,
+    fork_id: &str,
     process_modifier: MODIFIER,
     in_parent: PARENT,
     in_child: CHILD,
 ) -> Result<R>
 where
-    ID: Hash,
     MODIFIER: FnOnce(&mut process::Command),
     PARENT: FnOnce(&mut Child, &mut fs::File) -> R,
     T: TestExitStatus<E>,
     CHILD: FnOnce() -> T,
 {
-    let fork_id = id_str(fork_id);
-
     // Erase the generics so we don't instantiate the actual implementation for
     // every single test
     let mut return_value = None;
@@ -144,13 +138,13 @@ where
 
 fn fork_impl<E: Debug, T: TestExitStatus<E>>(
     test_name: &str,
-    fork_id: String,
+    fork_id: &str,
     process_modifier: &mut dyn FnMut(&mut process::Command),
     in_parent: &mut dyn FnMut(&mut Child, &mut fs::File),
     in_child: &mut dyn FnMut() -> T,
 ) -> Result<()> {
     let mut occurs = env::var(OCCURS_ENV).unwrap_or_else(|_| String::new());
-    if occurs.contains(&fork_id) {
+    if occurs.contains(fork_id) {
         match panic::catch_unwind(panic::AssertUnwindSafe(in_child)) {
             Ok(test_result) => match test_result.status() {
                 Ok(_) => process::exit(0),
@@ -210,7 +204,7 @@ fn fork_impl<E: Debug, T: TestExitStatus<E>>(
             }
         }
 
-        occurs.push_str(&fork_id);
+        occurs.push_str(fork_id);
         let mut command =
             process::Command::new(env::current_exe().expect("current_exe() failed, cannot fork"));
         command
@@ -230,11 +224,6 @@ fn fork_impl<E: Debug, T: TestExitStatus<E>>(
     }
 }
 
-fn id_str<ID: Hash>(id: ID) -> String {
-    let mut hasher = DefaultHasher::default();
-    id.hash(&mut hasher);
-    format!(":{:016X}", hasher.finish())
-}
 
 #[cfg(test)]
 mod test {
@@ -373,7 +362,7 @@ mod test {
 
     #[test]
     fn child_aborted_if_panics() {
-        let status = fork::<_, _, _, _, _, (), _>(
+        let status = fork::<_, _, _, _, (), _>(
             "fork::test::child_aborted_if_panics",
             rusty_fork_id!(),
             |_| (),
