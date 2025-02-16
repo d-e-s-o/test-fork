@@ -8,7 +8,6 @@
 // except according to those terms.
 
 use std::env;
-use std::fmt::Debug;
 use std::fs;
 use std::io;
 use std::io::BufRead;
@@ -16,6 +15,8 @@ use std::io::Seek;
 use std::panic;
 use std::process;
 use std::process::Child;
+use std::process::ExitCode;
+use std::process::Termination;
 
 use crate::cmdline;
 use crate::error::*;
@@ -23,33 +24,6 @@ use crate::error::*;
 const OCCURS_ENV: &str = "TEST_FORK_OCCURS";
 const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
 
-pub trait TestExitStatus<E: Debug> {
-    fn status(self) -> std::result::Result<(), E>;
-}
-
-impl<T, E: Debug> TestExitStatus<E> for std::result::Result<T, E> {
-    fn status(self) -> std::result::Result<(), E> {
-        match self {
-            Ok(_) => Ok(()),
-            Err(err) => Err(err),
-        }
-    }
-}
-
-impl<T> TestExitStatus<()> for Option<T> {
-    fn status(self) -> std::result::Result<(), ()> {
-        match self {
-            Some(_) => Ok(()),
-            None => Err(()),
-        }
-    }
-}
-
-impl TestExitStatus<()> for () {
-    fn status(self) -> std::result::Result<(), ()> {
-        Ok(())
-    }
-}
 
 /// Simulate a process fork.
 ///
@@ -102,7 +76,7 @@ impl TestExitStatus<()> for () {
 /// executable.
 ///
 /// Panics if any argument to the current process is not valid UTF-8.
-pub fn fork<MODIFIER, PARENT, CHILD, R, T, E: Debug>(
+pub fn fork<MODIFIER, PARENT, CHILD, R, T>(
     test_name: &str,
     fork_id: &str,
     process_modifier: MODIFIER,
@@ -112,7 +86,7 @@ pub fn fork<MODIFIER, PARENT, CHILD, R, T, E: Debug>(
 where
     MODIFIER: FnOnce(&mut process::Command),
     PARENT: FnOnce(&mut Child, &mut fs::File) -> R,
-    T: TestExitStatus<E>,
+    T: Termination,
     CHILD: FnOnce() -> T,
 {
     // Erase the generics so we don't instantiate the actual implementation for
@@ -132,7 +106,7 @@ where
     .map(|_| return_value.unwrap())
 }
 
-fn fork_impl<E: Debug, T: TestExitStatus<E>>(
+fn fork_impl<T: Termination>(
     test_name: &str,
     fork_id: &str,
     process_modifier: &mut dyn FnMut(&mut process::Command),
@@ -142,13 +116,14 @@ fn fork_impl<E: Debug, T: TestExitStatus<E>>(
     let mut occurs = env::var(OCCURS_ENV).unwrap_or_else(|_| String::new());
     if occurs.contains(fork_id) {
         match panic::catch_unwind(panic::AssertUnwindSafe(in_child)) {
-            Ok(test_result) => match test_result.status() {
-                Ok(_) => process::exit(0),
-                Err(err) => {
-                    eprintln!("Test failure cause by: {:?}", err);
-                    process::exit(70 /* EX_SOFTWARE */)
-                }
-            },
+            Ok(test_result) => {
+                let rc = if test_result.report() == ExitCode::SUCCESS {
+                    0
+                } else {
+                    70
+                };
+                process::exit(rc)
+            }
             // Assume that the default panic handler already printed something
             //
             // We don't use process::abort() since it produces core dumps on
@@ -361,7 +336,7 @@ mod test {
 
     #[test]
     fn child_aborted_if_panics() {
-        let status = fork::<_, _, _, _, (), _>(
+        let status = fork::<_, _, _, _, ()>(
             "fork::test::child_aborted_if_panics",
             fork_id!(),
             |_| (),
