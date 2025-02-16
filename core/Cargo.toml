@@ -8,6 +8,3 @@ repository = "https://github.com/d-e-s-o/test-fork"
 description = """
 Core fork logic of test-fork.
 """
-
-[dependencies]
-tempfile = "3.0"
