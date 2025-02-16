@@ -52,13 +52,10 @@ macro_rules! fork_test {
             fn body_fn() $( -> $test_return )? $body
             let body: fn () $( -> $test_return )? = body_fn;
 
-            fn supervise_fn(child: &mut std::process::Child,
-                            _file: &mut ::std::fs::File) {
+            fn supervise_fn(child: &mut std::process::Child) {
                 $crate::supervise_child(child)
             }
-            let supervise:
-                fn (&mut std::process::Child, &mut ::std::fs::File) =
-                supervise_fn;
+            let supervise: fn (&mut std::process::Child) = supervise_fn;
 
             $crate::fork(
                 $crate::fork_test_name!($test_name),
@@ -110,7 +107,7 @@ mod test {
         #[test]
         fn trivial() { }
 
-         #[test]
+        #[test]
         fn trivial_with_ok() -> Result<(), &'static str> { Ok(()) }
 
         #[test]
