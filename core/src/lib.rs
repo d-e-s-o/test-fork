@@ -17,7 +17,7 @@
 #[macro_use]
 mod sugar;
 #[macro_use]
-pub mod fork_test;
+mod fork_test;
 mod cmdline;
 mod error;
 mod fork;

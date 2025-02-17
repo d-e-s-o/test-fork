@@ -4,6 +4,8 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
+use proc_macro2::Ident;
+use proc_macro2::Span;
 use proc_macro2::TokenStream as Tokens;
 
 use quote::quote;
@@ -13,6 +15,7 @@ use syn::Attribute;
 use syn::Error;
 use syn::ItemFn;
 use syn::Result;
+use syn::ReturnType;
 
 
 /// A procedural macro for running a test in a separate process.
@@ -92,17 +95,40 @@ fn try_test(attr: TokenStream, input_fn: ItemFn) -> Result<Tokens> {
         ))
     }
 
-    let has_test = input_fn.attrs.iter().any(is_test_attribute);
+    let ItemFn {
+        attrs,
+        vis,
+        mut sig,
+        block,
+    } = input_fn;
+
+    let has_test = attrs.iter().any(is_test_attribute);
     let inner_test = if has_test {
         quote! {}
     } else {
         quote! { #[::core::prelude::v1::test]}
     };
 
+    let test_name = sig.ident.clone();
+    let mut body_fn_sig = sig.clone();
+    body_fn_sig.ident = Ident::new("body_fn", Span::call_site());
+    // Our tests currently basically have to return (), because we don't
+    // have a good way of conveying the result back from the child
+    // process.
+    sig.output = ReturnType::Default;
+
     let augmented_test = quote! {
-        ::test_fork::fork_test! {
-            #inner_test
-            #input_fn
+        #inner_test
+        #(#attrs)*
+        #vis #sig {
+            #body_fn_sig
+            #block
+
+            ::test_fork::test_fork_core::fork(
+                ::test_fork::test_fork_core::fork_id!(),
+                ::test_fork::test_fork_core::fork_test_name!(#test_name),
+                body_fn as fn() -> _,
+            ).expect("forking test failed")
         }
     };
 
