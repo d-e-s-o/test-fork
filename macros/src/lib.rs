@@ -53,7 +53,14 @@ use syn::ReturnType;
 pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
 
-    try_test(attr, input_fn)
+    let has_test = input_fn.attrs.iter().any(is_test_attribute);
+    let inner_test = if has_test {
+        quote! {}
+    } else {
+        quote! { #[::core::prelude::v1::test]}
+    };
+
+    try_test(attr, input_fn, inner_test)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
@@ -87,7 +94,7 @@ fn is_test_attribute(attr: &Attribute) -> bool {
     })
 }
 
-fn try_test(attr: TokenStream, input_fn: ItemFn) -> Result<Tokens> {
+fn try_test(attr: TokenStream, input_fn: ItemFn, inner_test: Tokens) -> Result<Tokens> {
     if !attr.is_empty() {
         return Err(Error::new_spanned(
             Tokens::from(attr),
@@ -101,13 +108,6 @@ fn try_test(attr: TokenStream, input_fn: ItemFn) -> Result<Tokens> {
         mut sig,
         block,
     } = input_fn;
-
-    let has_test = attrs.iter().any(is_test_attribute);
-    let inner_test = if has_test {
-        quote! {}
-    } else {
-        quote! { #[::core::prelude::v1::test]}
-    };
 
     let test_name = sig.ident.clone();
     let mut body_fn_sig = sig.clone();
