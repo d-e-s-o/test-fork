@@ -52,16 +52,11 @@ macro_rules! fork_test {
             fn body_fn() $( -> $test_return )? $body
             let body: fn () $( -> $test_return )? = body_fn;
 
-            fn supervise_fn(child: &mut std::process::Child) {
-                $crate::supervise_child(child)
-            }
-            let supervise: fn (&mut std::process::Child) = supervise_fn;
-
             $crate::fork(
-                $crate::fork_test_name!($test_name),
                 $crate::fork_id!(),
-                $crate::no_configure_child,
-                supervise, body).expect("forking test failed")
+                $crate::fork_test_name!($test_name),
+                body,
+            ).expect("forking test failed")
         }
     )* };
 }

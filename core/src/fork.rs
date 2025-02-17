@@ -20,6 +20,8 @@ use std::process::Termination;
 
 use crate::cmdline;
 use crate::error::*;
+use crate::no_configure_child;
+use crate::supervise_child;
 
 const OCCURS_ENV: &str = "TEST_FORK_OCCURS";
 const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
@@ -36,32 +38,17 @@ const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
 /// process is not (e.g., putting this call in a recursive function) and
 /// results in unspecified behaviour.
 ///
-/// `test_name` must exactly match the full path of the test function being
-/// run.
-///
 /// `fork_id` is a unique identifier identifying this particular fork location.
 /// This *must* be stable across processes of the same executable; pointers are
 /// not suitable stable, and string constants may not be suitably unique. The
 /// [`fork_id!()`] macro is the recommended way to supply this
 /// parameter.
 ///
-/// If this is the parent process, `in_parent` is invoked, and the return value
-/// becomes the return value from this function. The callback is passed a
-/// handle to the file which receives the child's output. If is the callee's
-/// responsibility to wait for the child to exit. If this is the child process,
-/// `in_child` is invoked, and when the callback returns, the child process
-/// exits.
+/// `test_name` must exactly match the full path of the test function being
+/// run.
 ///
-/// If `in_parent` returns or panics before the child process has terminated,
-/// the child process is killed.
-///
-/// If `in_child` panics, the child process exits with a failure code
-/// immediately rather than let the panic propagate out of the `fork()` call.
-///
-/// `process_modifier` is invoked on the `std::process::Command` immediately
-/// before spawning the new process. The callee may modify the process
-/// parameters if desired, but should not do anything that would modify or
-/// remove any environment variables beginning with `RUSTY_FORK_`.
+/// If `test` panics, the child process exits with a failure code immediately
+/// rather than let the panic propagate out of the `fork()` call.
 ///
 /// ## Panics
 ///
@@ -72,18 +59,36 @@ const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
 /// executable.
 ///
 /// Panics if any argument to the current process is not valid UTF-8.
-pub fn fork<MODIFIER, PARENT, CHILD, R, T>(
+pub fn fork<F, T>(fork_id: &str, test_name: &str, test: F) -> Result<()>
+where
+    // NB: We use `Fn` here, because `FnMut` and `FnOnce` would allow
+    //     for modification of captured variables, but that will not
+    //     work across process boundaries.
+    F: Fn() -> T,
+    T: Termination,
+{
+    fork_int(
+        test_name,
+        fork_id,
+        no_configure_child,
+        supervise_child,
+        test,
+    )
+}
+
+
+pub(crate) fn fork_int<M, P, C, R, T>(
     test_name: &str,
     fork_id: &str,
-    process_modifier: MODIFIER,
-    in_parent: PARENT,
-    in_child: CHILD,
+    process_modifier: M,
+    in_parent: P,
+    in_child: C,
 ) -> Result<R>
 where
-    MODIFIER: FnOnce(&mut process::Command),
-    PARENT: FnOnce(&mut Child) -> R,
+    M: FnOnce(&mut process::Command),
+    P: FnOnce(&mut Child) -> R,
     T: Termination,
-    CHILD: FnOnce() -> T,
+    C: FnOnce() -> T,
 {
     // Erase the generics so we don't instantiate the actual implementation for
     // every single test
@@ -244,7 +249,7 @@ mod test {
 
     #[test]
     fn fork_basically_works() {
-        let status = fork(
+        let status = fork_int(
             "fork::test::fork_basically_works",
             fork_id!(),
             |_| (),
@@ -257,13 +262,13 @@ mod test {
 
     #[test]
     fn child_output_captured_and_repeated() {
-        let output = fork(
+        let output = fork_int(
             "fork::test::child_output_captured_and_repeated",
             fork_id!(),
             capturing_output,
             wait_for_child_output,
             || {
-                fork(
+                fork_int(
                     "fork::test::child_output_captured_and_repeated",
                     fork_id!(),
                     |_| (),
@@ -279,13 +284,13 @@ mod test {
 
     #[test]
     fn child_killed_if_parent_exits_first() {
-        let output = fork(
+        let output = fork_int(
             "fork::test::child_killed_if_parent_exits_first",
             fork_id!(),
             capturing_output,
             wait_for_child_output,
             || {
-                fork(
+                fork_int(
                     "fork::test::child_killed_if_parent_exits_first",
                     fork_id!(),
                     inherit_output,
@@ -310,13 +315,13 @@ mod test {
 
     #[test]
     fn child_killed_if_parent_panics_first() {
-        let output = fork(
+        let output = fork_int(
             "fork::test::child_killed_if_parent_panics_first",
             fork_id!(),
             capturing_output,
             wait_for_child_output,
             || {
-                assert!(panic::catch_unwind(panic::AssertUnwindSafe(|| fork(
+                assert!(panic::catch_unwind(panic::AssertUnwindSafe(|| fork_int(
                     "fork::test::child_killed_if_parent_panics_first",
                     fork_id!(),
                     inherit_output,
@@ -342,7 +347,7 @@ mod test {
 
     #[test]
     fn child_aborted_if_panics() {
-        let status = fork::<_, _, _, _, ()>(
+        let status = fork_int::<_, _, _, _, ()>(
             "fork::test::child_aborted_if_panics",
             fork_id!(),
             |_| (),
