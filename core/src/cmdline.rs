@@ -228,7 +228,7 @@ pub(crate) static RUN_TEST_ARGS: &[&str] = &[
 mod test {
     use super::*;
 
-    use crate::fork_test;
+    use crate::fork;
 
 
     fn strip(cmdline: &str) -> Result<String> {
@@ -270,11 +270,11 @@ mod test {
         }
     }
 
-    // Subprocess so we can change the environment without affecting other
-    // tests
-    fork_test! {
-        #[test]
-        fn define_args_via_env() {
+    #[test]
+    fn define_args_via_env() {
+        // Run in subprocess so we can change the environment without
+        // affecting other tests.
+        fork(fork_id!(), fork_test_name!(define_args_via_env), || {
             env::set_var("TEST_FORK_FLAG_X", "pass");
             env::set_var("TEST_FORK_FLAG_FOO", "pass-arg");
             env::set_var("TEST_FORK_FLAG_BAR", "drop");
@@ -284,6 +284,7 @@ mod test {
             assert_eq!("--foo bar", &strip("test --foo bar").unwrap());
             assert_eq!("", &strip("test --bar").unwrap());
             assert_eq!("", &strip("test --baz --notaflag").unwrap());
-        }
+        })
+        .unwrap()
     }
 }
