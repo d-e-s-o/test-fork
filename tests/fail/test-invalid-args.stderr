@@ -1,0 +1,5 @@
+error: test_fork::test does not currently accept arguments
+ --> tests/fail/test-invalid-args.rs:5:19
+  |
+5 | #[test_fork::test(inner_test)]
+  |                   ^^^^^^^^^^

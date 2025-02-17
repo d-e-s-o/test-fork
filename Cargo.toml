@@ -31,3 +31,6 @@ A library for running tests in separate processes.
 [dependencies]
 test-fork-core = { version = "=0.1.1", path = "core" }
 test-fork-macros = { version = "=0.1.1", path = "macros" }
+
+[dev-dependencies]
+trybuild = "1.0"
