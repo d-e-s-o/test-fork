@@ -12,8 +12,6 @@
 //! Some functionality in this module is useful to other implementors and
 //! unlikely to change. This subset is documented and considered stable.
 
-use std::process::Child;
-use std::process::Command;
 
 /// Run Rust tests in subprocesses.
 ///
@@ -75,19 +73,6 @@ macro_rules! fork_test_name {
         $crate::fix_module_path(concat!(module_path!(), "::", stringify!($function_name)))
     };
 }
-
-#[allow(missing_docs)]
-pub fn supervise_child(child: &mut Child) {
-    let status = child.wait().expect("failed to wait for child");
-    assert!(
-        status.success(),
-        "child exited unsuccessfully with {}",
-        status
-    );
-}
-
-#[allow(missing_docs)]
-pub fn no_configure_child(_child: &mut Command) {}
 
 /// Transform a string representing a qualified path as generated via
 /// `module_path!()` into a qualified path as expected by the standard Rust

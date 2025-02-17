@@ -22,8 +22,4 @@ mod fork;
 pub use crate::fork::fork;
 #[doc(hidden)]
 pub use crate::fork_test::fix_module_path;
-#[doc(hidden)]
-pub use crate::fork_test::no_configure_child;
-#[doc(hidden)]
-pub use crate::fork_test::supervise_child;
 pub use crate::sugar::ForkId;

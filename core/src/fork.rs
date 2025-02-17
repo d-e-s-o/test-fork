@@ -14,14 +14,14 @@ use std::io::Read;
 use std::panic;
 use std::process;
 use std::process::Child;
+use std::process::Command;
 use std::process::ExitCode;
 use std::process::Stdio;
 use std::process::Termination;
 
 use crate::cmdline;
-use crate::error::*;
-use crate::no_configure_child;
-use crate::supervise_child;
+use crate::error::Result;
+
 
 const OCCURS_ENV: &str = "TEST_FORK_OCCURS";
 const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
@@ -67,6 +67,17 @@ where
     F: Fn() -> T,
     T: Termination,
 {
+    fn supervise_child(child: &mut Child) {
+        let status = child.wait().expect("failed to wait for child");
+        assert!(
+            status.success(),
+            "child exited unsuccessfully with {}",
+            status
+        );
+    }
+
+    fn no_configure_child(_child: &mut Command) {}
+
     fork_int(
         test_name,
         fork_id,
