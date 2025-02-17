@@ -1,3 +1,6 @@
+// Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
+// SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
 //-
 // Copyright 2018 Jason Lingle
 //
