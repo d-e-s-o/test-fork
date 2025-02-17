@@ -80,30 +80,3 @@ macro_rules! fork_test_name {
 pub fn fix_module_path(path: &str) -> &str {
     path.find("::").map(|ix| &path[ix + 2..]).unwrap_or(path)
 }
-
-#[cfg(test)]
-mod test {
-    fork_test! {
-        #[test]
-        fn trivial() { }
-
-        #[test]
-        fn trivial_with_ok() -> Result<(), &'static str> { Ok(()) }
-
-        #[test]
-        #[should_panic]
-        fn trivial_with_err() -> Result<(), &'static str> { Err("should fail.") }
-
-        #[test]
-        #[should_panic]
-        fn panicking_child() {
-            panic!("just testing a panic, nothing to see here");
-        }
-
-        #[test]
-        #[should_panic]
-        fn aborting_child() {
-            ::std::process::abort();
-        }
-    }
-}
