@@ -7,12 +7,11 @@ test-fork
 - [Documentation][docs-rs]
 - [Changelog](CHANGELOG.md)
 
-A custom `#[test]` attribute that makes sure to run the test in a
-separate process. Process separation can be useful in many contexts,
-including when testing interactions with necessarily process-global
-state (e.g., when working environment variables, when testing code that
-requires temporary user ID switching, or when adjusting the working
-directory).
+Custom attributes making sure a test is run in a separate process.
+Process separation can be useful in many contexts, including when
+testing interactions with necessarily process-global state (e.g., when
+working environment variables, when testing code that requires temporary
+user ID switching, or when adjusting the working directory).
 
 Usage
 -----
@@ -28,10 +27,11 @@ fn test1() {
 }
 ```
 
-The crate also supports an alternative syntax that nests more easily
-with other custom `#[test]` attributes and which allows for easier
-annotation of individual tests (e.g., if only a sub-set is meant to
-be run in separate processes):
+Also provided is the `#[fork]` attribute, which does not in itself make
+a function a test, so it will *always* have to be combined with an
+additional `#[test]` attribute. However, it can be more convenient for
+annotating only a sub-set of tests for running in separate processes,
+especially when non-standard `#[test]` attributes are involved:
 ```rust
 use test_fork::test as fork;
 

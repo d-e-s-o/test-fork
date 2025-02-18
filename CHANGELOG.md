@@ -1,3 +1,9 @@
+Unreleased
+----------
+- Introduced `#[fork]` attribute that unconditionally requires nesting
+  with other `#[test]`
+
+
 0.1.1
 -----
 - Improved documentation of `#[test]` attribute

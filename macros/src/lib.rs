@@ -20,10 +20,6 @@ use syn::ReturnType;
 
 /// A procedural macro for running a test in a separate process.
 ///
-/// The attribute can be used to associate one or more tags with a test.
-/// The attribute should be placed before the eventual `#[test]`
-/// attribute.
-///
 /// # Example
 ///
 /// Use the attribute for all tests in scope:
@@ -36,15 +32,9 @@ use syn::ReturnType;
 /// }
 /// ```
 ///
-/// The attribute also supports an alternative syntax that nests more
-/// easily with other custom `#[test]` attributes and which allows for
-/// easier annotation of individual tests (e.g., if only a sub-set is
-/// meant to be run in separate processes):
+/// Use it only on a single test:
 /// ```rust,ignore
-/// use test_fork::test as fork;
-///
-/// #[fork]
-/// #[test]
+/// #[test_fork::test]
 /// fn test2() {
 ///   assert_eq!(2 + 3, 5);
 /// }
@@ -64,6 +54,48 @@ pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
+
+
+/// A procedural macro for running a test in a separate process.
+///
+/// Contrary to #[[macro@test]], this attribute does not in itself make
+/// a function a test, so it will *always* have to be combined with an
+/// additional `#[test]` attribute. However, it can be more convenient
+/// for annotating only a sub-set of tests for running in separate
+/// processes, especially when non-standard `#[test]` attributes are
+/// involved:
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use test_fork::fork;
+///
+/// #[fork]
+/// #[test]
+/// fn test3() {
+///   assert_eq!(2 + 4, 6);
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn fork(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input_fn = parse_macro_input!(item as ItemFn);
+
+    let has_test = input_fn.attrs.iter().any(is_test_attribute);
+    if !has_test {
+        return Error::new_spanned(
+            Tokens::from(attr),
+            "test_fork::fork requires an inner #[test] attribute",
+        )
+        .into_compile_error()
+        .into();
+    }
+
+    let inner_test = quote! {};
+    try_test(attr, input_fn, inner_test)
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
+}
+
 
 /// Check whether given attribute is a test attribute of forms:
 /// - `#[test]`
@@ -98,7 +130,7 @@ fn try_test(attr: TokenStream, input_fn: ItemFn, inner_test: Tokens) -> Result<T
     if !attr.is_empty() {
         return Err(Error::new_spanned(
             Tokens::from(attr),
-            "test_fork::test does not currently accept arguments",
+            "the attribute does not currently accept arguments",
         ))
     }
 

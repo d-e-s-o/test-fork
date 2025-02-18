@@ -3,31 +3,33 @@
 
 use std::process;
 
-use test_fork::test;
 
-
-#[test]
+#[test_fork::test]
 fn trivial() {}
 
-#[test]
+#[test_fork::test]
 fn trivial_with_ok() -> Result<(), &'static str> {
     Ok(())
 }
 
-#[test]
+#[test_fork::test]
 #[should_panic]
 fn trivial_with_err() -> Result<(), &'static str> {
     Err("should fail.")
 }
 
-#[test]
+#[test_fork::test]
 #[should_panic]
 fn panicking_child() {
     panic!("just testing a panic, nothing to see here");
 }
 
-#[test]
+#[test_fork::test]
 #[should_panic]
 fn aborting_child() {
     process::abort();
 }
+
+#[test_fork::fork]
+#[test]
+fn fork_attr() {}
