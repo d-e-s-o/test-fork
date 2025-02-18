@@ -28,9 +28,25 @@ description = """
 A library for running tests in separate processes.
 """
 
+[features]
+# Enable unstable features. These are generally exempt from any semantic
+# versioning guarantees.
+unstable = ["test-fork-macros/unstable"]
+# Enable potentially unsound features.
+unsound = ["test-fork-macros/unsound"]
+
+[[test]]
+name = "unstable"
+required-features = ["unstable", "unsound"]
+
 [dependencies]
 test-fork-core = { version = "=0.1.1", path = "core" }
 test-fork-macros = { version = "=0.1.1", path = "macros" }
 
 [dev-dependencies]
 trybuild = "1.0"
+
+# See https://docs.rs/about/metadata
+[package.metadata.docs.rs]
+# Define the configuration attribute `docsrs`.
+rustdoc-args = ["--cfg", "docsrs"]

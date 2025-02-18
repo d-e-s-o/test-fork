@@ -42,5 +42,21 @@ fn test2() {
 }
 ```
 
+The crate also supports running `libtest` style benchmarks in a separate
+process. This functionality is available only when both the `unstable`
+and `unsound` features are enabled. The functionality is unstable
+because `libtest` benchmarks are unstable and only available on nightly.
+It is potentially unsound because the implementation necessarily needs
+to transfer `Bencher` objects across process boundaries, but said
+objects don't offer a stable ABI.
+
+```rust
+use test_fork::bench;
+
+#[bench]
+fn bench1(b: &mut Bencher) {
+    b.iter(|| sleep(Duration::from_millis(1)));
+}
+```
 
 [docs-rs]: https://docs.rs/test-fork

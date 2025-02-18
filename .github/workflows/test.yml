@@ -33,6 +33,15 @@ jobs:
       run: |
         cargo build --workspace --profile=${{ matrix.profile }}
         cargo test --workspace --profile=${{ matrix.profile }}
+  test-unstable:
+    name: Test unstable functionality
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@nightly
+    - uses: Swatinem/rust-cache@v2
+    - name: Build & test
+      run: cargo bench --test=unstable --features=unstable,unsound
   rustfmt:
     name: Check code formatting
     runs-on: ubuntu-latest
@@ -47,16 +56,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --no-deps --all-targets --all-features -- -A unknown_lints -D warnings
   rustdoc:
     name: Generate documentation
     runs-on: ubuntu-latest
     env:
-      RUSTDOCFLAGS: '-D warnings -D rustdoc::broken_intra_doc_links'
+      RUSTDOCFLAGS: '--cfg docsrs -D warnings -D rustdoc::broken_intra_doc_links'
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
       - run: cargo doc --workspace --no-deps

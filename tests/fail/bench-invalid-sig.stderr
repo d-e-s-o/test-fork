@@ -1,0 +1,5 @@
+error: benchmark function has unexpected signature (expected single `&mut Bencher` argument)
+ --> tests/fail/bench-invalid-sig.rs:6:1
+  |
+6 | fn invalid_sig() {}
+  | ^^^^^^^^^^^^^^^^

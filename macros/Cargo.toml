@@ -12,6 +12,10 @@ Supporting procedural macro crate for test-fork.
 [lib]
 proc-macro = true
 
+[features]
+unstable = []
+unsound = []
+
 [dependencies]
 proc-macro2 = { version = "1.0.32", default-features = false }
 quote = { version = "1.0", default-features = false }

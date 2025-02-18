@@ -1,7 +1,11 @@
 // Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 extern crate proc_macro;
+
+use std::ops::Deref as _;
 
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
@@ -9,18 +13,24 @@ use proc_macro2::Span;
 use proc_macro2::TokenStream as Tokens;
 
 use quote::quote;
+use quote::ToTokens as _;
 
 use syn::parse_macro_input;
 use syn::Attribute;
 use syn::Error;
+use syn::FnArg;
 use syn::ItemFn;
+use syn::Pat;
 use syn::Result;
 use syn::ReturnType;
+use syn::Signature;
+use syn::Type;
 
 
 #[derive(Debug)]
 enum Kind {
     Test,
+    Bench,
 }
 
 impl Kind {
@@ -28,6 +38,7 @@ impl Kind {
     fn as_str(&self) -> &str {
         match self {
             Self::Test => "test",
+            Self::Bench => "bench",
         }
     }
 }
@@ -69,6 +80,48 @@ pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     try_test(attr, input_fn, inner_test)
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
+}
+
+
+/// A procedural macro for running a benchmark in a separate process.
+///
+/// # Example
+///
+/// Use the attribute for all benchmarks in scope:
+/// ```rust,ignore
+/// use test_fork::bench;
+///
+/// #[bench]
+/// fn bench1(b: &mut Bencher) {
+///   b.iter(|| sleep(Duration::from_millis(1)));
+/// }
+/// ```
+///
+/// Use it only on a single benchmark:
+/// ```rust,ignore
+/// #[test_fork::bench]
+/// fn bench2(b: &mut Bencher) {
+///   b.iter(|| sleep(Duration::from_millis(1)));
+/// }
+#[cfg(all(feature = "unstable", feature = "unsound"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "unstable", feature = "unsound"))))]
+#[proc_macro_attribute]
+pub fn bench(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input_fn = parse_macro_input!(item as ItemFn);
+
+    let has_bench = input_fn
+        .attrs
+        .iter()
+        .any(|attr| is_attribute_kind(Kind::Bench, attr));
+    let inner_bench = if has_bench {
+        quote! {}
+    } else {
+        quote! { #[::core::prelude::v1::bench]}
+    };
+
+    try_bench(attr, input_fn, inner_bench)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
@@ -187,4 +240,88 @@ fn try_test(attr: TokenStream, input_fn: ItemFn, inner_test: Tokens) -> Result<T
     };
 
     Ok(augmented_test)
+}
+
+fn parse_bench_sig(sig: &Signature) -> Option<(Pat, Type)> {
+    if sig.inputs.len() != 1 {
+        return None
+    }
+
+    if let FnArg::Typed(pat_type) = sig.inputs.first().unwrap() {
+        let ty = match pat_type.ty.deref() {
+            Type::Reference(ty_ref) => ty_ref.elem.clone(),
+            _ => return None,
+        };
+        Some((*pat_type.pat.clone(), *ty))
+    } else {
+        None
+    }
+}
+
+fn try_bench(attr: TokenStream, input_fn: ItemFn, inner_bench: Tokens) -> Result<Tokens> {
+    if !attr.is_empty() {
+        return Err(Error::new_spanned(
+            Tokens::from(attr),
+            "the attribute does not currently accept arguments",
+        ))
+    }
+
+    let ItemFn {
+        attrs,
+        vis,
+        mut sig,
+        block,
+    } = input_fn;
+
+    let (bencher_name, bencher_ty) = parse_bench_sig(&sig).ok_or_else(|| {
+        Error::new_spanned(
+            sig.to_token_stream(),
+            "benchmark function has unexpected signature (expected single `&mut Bencher` argument)",
+        )
+    })?;
+
+    let test_name = sig.ident.clone();
+    let mut body_fn_sig = sig.clone();
+    body_fn_sig.ident = Ident::new("body_fn", Span::call_site());
+    sig.output = ReturnType::Default;
+
+    let augmented_bench = quote! {
+        #inner_bench
+        #(#attrs)*
+        #vis #sig {
+            #body_fn_sig
+            #block
+
+            use ::std::mem::size_of;
+            use ::std::mem::transmute;
+
+            type BencherBuf = [u8; size_of::<#bencher_ty>()];
+
+            // SAFETY: Probably unsound. We can't guarantee that the
+            //         `Bencher` type is just a bunch of bytes that we
+            //         can copy around. And yet, that's the best we can
+            //         do.
+            let buf_ref = unsafe {
+                transmute::<&mut #bencher_ty, &mut BencherBuf>(#bencher_name)
+            };
+
+            fn wrapper_fn(buf_ref: &mut [u8]) {
+                let buf_ref = <&mut BencherBuf>::try_from(buf_ref).unwrap();
+                // SAFETY: See above.
+                let bench_ref = unsafe {
+                    transmute::<&mut BencherBuf, &mut #bencher_ty>(buf_ref)
+                };
+                let () = body_fn(bench_ref);
+            }
+
+            ::test_fork::test_fork_core::fork_in_out(
+                ::test_fork::test_fork_core::fork_id!(),
+                ::test_fork::test_fork_core::fork_test_name!(#test_name),
+                wrapper_fn as fn(&mut [u8]) -> _,
+                buf_ref,
+            ).expect("forking test failed")
+        }
+    };
+
+    Ok(augmented_bench)
 }
