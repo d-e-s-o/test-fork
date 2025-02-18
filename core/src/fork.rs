@@ -14,6 +14,9 @@ use std::env;
 use std::io;
 use std::io::BufRead;
 use std::io::Read;
+use std::io::Write as _;
+use std::net::TcpListener;
+use std::net::TcpStream;
 use std::panic;
 use std::process;
 use std::process::Child;
@@ -90,6 +93,66 @@ where
     )
 }
 
+/// Simulate a process fork.
+///
+/// This function is similar to [`fork`], except that it allows for data
+/// exchange with the child process.
+pub fn fork_in_out<F, T>(fork_id: &str, test_name: &str, test: F, data: &mut [u8]) -> Result<()>
+where
+    F: Fn(&mut [u8]) -> T,
+    T: Termination,
+{
+    let listener = TcpListener::bind("127.0.0.1:0").expect("failed to bind TCP socket");
+    let addr = listener.local_addr().unwrap();
+    let data_len = data.len();
+
+    fork_int(
+        test_name,
+        fork_id,
+        |cmd| {
+            cmd.env(fork_id, addr.to_string());
+        },
+        |child| {
+            let (mut stream, _addr) = listener
+                .accept()
+                .expect("failed to listen for child connection");
+            let () = stream
+                .write_all(data)
+                .expect("failed to send data to child");
+            let () = stream
+                .read_exact(data)
+                .expect("failed to receive data from child");
+            let status = child.wait().expect("failed to wait for child");
+            assert!(
+                status.success(),
+                "child exited unsuccessfully with {}",
+                status
+            );
+        },
+        || {
+            let addr = env::var(fork_id).unwrap_or_else(|err| {
+                panic!("failed to retrieve {fork_id} environment variable: {err}")
+            });
+            let mut stream =
+                TcpStream::connect(addr).expect("failed to establish connection with parent");
+
+            let mut data = Vec::with_capacity(data_len);
+            // SAFETY: The `Vec` contains `data_len` `u8` values, which
+            //         are valid for any bit pattern, so we can safely
+            //         adjust the length.
+            let () = unsafe { data.set_len(data_len) };
+
+            let () = stream
+                .read_exact(&mut data)
+                .expect("failed to receive data from parent");
+            let status = test(&mut data);
+            let () = stream
+                .write_all(&data)
+                .expect("failed to send data to parent");
+            status
+        },
+    )
+}
 
 pub(crate) fn fork_int<M, P, C, R, T>(
     test_name: &str,
@@ -227,7 +290,6 @@ fn fork_impl<T: Termination>(
 mod test {
     use super::*;
 
-    use std::io::Read;
     use std::thread;
 
     use crate::fork_id;
@@ -370,5 +432,24 @@ mod test {
         )
         .unwrap();
         assert_eq!(70, status.code().unwrap());
+    }
+
+    /// Check that we can exchange data with the child process.
+    #[test]
+    fn data_exchange() {
+        let mut data = [1, 2, 3, 4, 5];
+
+        let () = fork_in_out(
+            fork_id!(),
+            "fork::test::data_exchange",
+            |data| {
+                assert_eq!(data.len(), 5);
+                let () = data.iter_mut().for_each(|x| *x += 1);
+            },
+            data.as_mut_slice(),
+        )
+        .unwrap();
+
+        assert_eq!(data, [2, 3, 4, 5, 6]);
     }
 }

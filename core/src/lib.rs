@@ -10,7 +10,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![deny(missing_docs, unsafe_code)]
+#![deny(missing_docs)]
 
 //! Supporting crate for `test-fork`.
 
@@ -23,6 +23,7 @@ mod error;
 mod fork;
 
 pub use crate::fork::fork;
+pub use crate::fork::fork_in_out;
 #[doc(hidden)]
 pub use crate::fork_test::fix_module_path;
 pub use crate::sugar::ForkId;
