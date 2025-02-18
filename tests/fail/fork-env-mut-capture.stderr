@@ -1,0 +1,10 @@
+error[E0594]: cannot assign to `x`, as it is a captured variable in a `Fn` closure
+  --> tests/fail/fork-env-mut-capture.rs:14:9
+   |
+10 | fn env_mut_capture() {
+   |    ---------------  - change this to return `FnMut` instead of `Fn`
+...
+13 |     fork(fork_id!(), "env_mut_capture", || {
+   |                                         -- in this closure
+14 |         x += 1;
+   |         ^^^^^^ cannot assign
