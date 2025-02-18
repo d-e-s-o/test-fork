@@ -18,6 +18,21 @@ use syn::Result;
 use syn::ReturnType;
 
 
+#[derive(Debug)]
+enum Kind {
+    Test,
+}
+
+impl Kind {
+    #[inline]
+    fn as_str(&self) -> &str {
+        match self {
+            Self::Test => "test",
+        }
+    }
+}
+
+
 /// A procedural macro for running a test in a separate process.
 ///
 /// # Example
@@ -43,7 +58,10 @@ use syn::ReturnType;
 pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
 
-    let has_test = input_fn.attrs.iter().any(is_test_attribute);
+    let has_test = input_fn
+        .attrs
+        .iter()
+        .any(|attr| is_attribute_kind(Kind::Test, attr));
     let inner_test = if has_test {
         quote! {}
     } else {
@@ -80,7 +98,10 @@ pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn fork(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
 
-    let has_test = input_fn.attrs.iter().any(is_test_attribute);
+    let has_test = input_fn
+        .attrs
+        .iter()
+        .any(|attr| is_attribute_kind(Kind::Test, attr));
     if !has_test {
         return Error::new_spanned(
             Tokens::from(attr),
@@ -97,23 +118,24 @@ pub fn fork(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 
-/// Check whether given attribute is a test attribute of forms:
-/// - `#[test]`
-/// - `#[core::prelude::*::test]` or `#[::core::prelude::*::test]`
-/// - `#[std::prelude::*::test]` or `#[::std::prelude::*::test]`
-fn is_test_attribute(attr: &Attribute) -> bool {
+/// Check whether given attribute is a test or bench attribute of the
+/// form:
+/// - `#[<kind>]`
+/// - `#[core::prelude::*::<kind>]` or `#[::core::prelude::*::<kind>]`
+/// - `#[std::prelude::*::<kind>]` or `#[::std::prelude::*::<kind>]`
+fn is_attribute_kind(kind: Kind, attr: &Attribute) -> bool {
     let path = match &attr.meta {
         syn::Meta::Path(path) => path,
         _ => return false,
     };
     let candidates = [
-        ["core", "prelude", "*", "test"],
-        ["std", "prelude", "*", "test"],
+        ["core", "prelude", "*", kind.as_str()],
+        ["std", "prelude", "*", kind.as_str()],
     ];
     if path.leading_colon.is_none()
         && path.segments.len() == 1
         && path.segments[0].arguments.is_none()
-        && path.segments[0].ident == "test"
+        && path.segments[0].ident == kind.as_str()
     {
         return true;
     } else if path.segments.len() != candidates[0].len() {
