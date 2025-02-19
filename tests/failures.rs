@@ -14,6 +14,7 @@ fn failures() {
     let () = t.compile_fail("tests/fail/fork-no-inner-test.rs");
 
     if cfg!(all(feature = "unstable", feature = "unsound")) {
+        let () = t.compile_fail("tests/fail/fork-no-inner-bench.rs");
         let () = t.compile_fail("tests/fail/bench-invalid-sig.rs");
     }
 }

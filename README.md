@@ -59,4 +59,6 @@ fn bench1(b: &mut Bencher) {
 }
 ```
 
+The `#[fork]` attribute is also able to deal with benchmarks.
+
 [docs-rs]: https://docs.rs/test-fork

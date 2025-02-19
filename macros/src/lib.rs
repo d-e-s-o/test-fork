@@ -127,13 +127,18 @@ pub fn bench(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 
-/// A procedural macro for running a test in a separate process.
+/// A procedural macro for running a test or benchmark in a separate
+/// process.
 ///
-/// Contrary to #[[macro@test]], this attribute does not in itself make
-/// a function a test, so it will *always* have to be combined with an
-/// additional `#[test]` attribute. However, it can be more convenient
-/// for annotating only a sub-set of tests for running in separate
-/// processes, especially when non-standard `#[test]` attributes are
+/// This attribute is able to cater to both tests and benchmarks, while
+/// #[[macro@test]] is specific to tests and #[[macro@bench]] to
+/// benchmarks.
+///
+/// Contrary to both, this attribute does not in itself make a function
+/// a test/benchmark, so it will *always* have to be combined with an
+/// additional "inner" attribute. However, it can be more convenient for
+/// annotating only a sub-set of tests/benchmarks for running in
+/// separate processes, especially when non-standard attributes are
 /// involved:
 ///
 /// # Example
@@ -146,28 +151,47 @@ pub fn bench(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// fn test3() {
 ///   assert_eq!(2 + 4, 6);
 /// }
+///
+/// #[fork]
+/// #[bench]
+/// fn bench3(b: &mut Bencher) {
+///   b.iter(|| sleep(Duration::from_millis(1)));
+/// }
 /// ```
 #[proc_macro_attribute]
 pub fn fork(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let supports_bench = cfg!(all(feature = "unstable", feature = "unsound"));
     let input_fn = parse_macro_input!(item as ItemFn);
 
     let has_test = input_fn
         .attrs
         .iter()
         .any(|attr| is_attribute_kind(Kind::Test, attr));
-    if !has_test {
-        return Error::new_spanned(
-            Tokens::from(attr),
-            "test_fork::fork requires an inner #[test] attribute",
-        )
-        .into_compile_error()
-        .into();
-    }
+    let has_bench = supports_bench
+        && input_fn
+            .attrs
+            .iter()
+            .any(|attr| is_attribute_kind(Kind::Bench, attr));
 
-    let inner_test = quote! {};
-    try_test(attr, input_fn, inner_test)
-        .unwrap_or_else(syn::Error::into_compile_error)
-        .into()
+    let inner_attr = quote! {};
+    if has_test {
+        try_test(attr, input_fn, inner_attr)
+    } else if has_bench {
+        try_bench(attr, input_fn, inner_attr)
+    } else {
+        let inner_attr = if parse_bench_sig(&input_fn.sig).is_some() {
+            "#[bench]"
+        } else {
+            "#[test]"
+        };
+
+        Err(Error::new_spanned(
+            Tokens::from(attr),
+            format!("test_fork::fork requires an inner {inner_attr} attribute"),
+        ))
+    }
+    .unwrap_or_else(syn::Error::into_compile_error)
+    .into()
 }
 
 

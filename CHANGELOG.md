@@ -3,7 +3,7 @@ Unreleased
 - Introduced `#[bench] atttribute for running benchmarks in a separate
   process
 - Introduced `#[fork]` attribute that unconditionally requires nesting
-  with other `#[test]`
+  with other `#[test]` or `#[bench]` attributes
 
 
 0.1.1

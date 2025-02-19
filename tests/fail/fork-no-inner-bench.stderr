@@ -1,0 +1,7 @@
+error: test_fork::fork requires an inner #[bench] attribute
+ --> tests/fail/fork-no-inner-bench.rs:6:1
+  |
+6 | #[test_fork::fork]
+  | ^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `test_fork::fork` (in Nightly builds, run with -Z macro-backtrace for more info)

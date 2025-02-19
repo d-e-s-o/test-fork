@@ -29,3 +29,12 @@ fn benchmark_regular_cmp(b: &mut Bencher) {
 fn benchmark(b: &mut Bencher) {
     b.iter(action)
 }
+
+
+/// Benchmark an "action" in a different process using the
+/// `#[test_fork::fork]` attribute.
+#[test_fork::fork]
+#[bench]
+fn benchmark_fork_attr(b: &mut Bencher) {
+    b.iter(action)
+}
