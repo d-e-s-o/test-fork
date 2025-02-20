@@ -1,6 +1,6 @@
-Unreleased
-----------
-- Introduced `#[bench] atttribute for running benchmarks in a separate
+0.1.2
+-----
+- Introduced `#[bench]` attribute for running benchmarks in a separate
   process
 - Introduced `#[fork]` attribute that unconditionally requires nesting
   with other `#[test]` or `#[bench]` attributes
