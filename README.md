@@ -34,7 +34,7 @@ additional `#[test]` attribute. However, it can be more convenient for
 annotating only a sub-set of tests for running in separate processes,
 especially when non-standard `#[test]` attributes are involved:
 ```rust
-use test_fork::test as fork;
+use test_fork::fork;
 
 #[fork]
 #[test]
