@@ -48,5 +48,6 @@ trybuild = "1.0"
 
 # See https://docs.rs/about/metadata
 [package.metadata.docs.rs]
+features = ["unstable", "unsound"]
 # Define the configuration attribute `docsrs`.
 rustdoc-args = ["--cfg", "docsrs"]

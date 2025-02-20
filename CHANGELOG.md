@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Build `docs.rs` documentation with all supported features
+
+
 0.1.2
 -----
 - Introduced `#[bench]` attribute for running benchmarks in a separate
