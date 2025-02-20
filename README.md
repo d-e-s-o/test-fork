@@ -1,5 +1,6 @@
 [![pipeline](https://github.com/d-e-s-o/test-fork/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/d-e-s-o/test-fork/actions/workflows/test.yml)
 [![crates.io](https://img.shields.io/crates/v/test-fork.svg)](https://crates.io/crates/test-fork)
+[![Docs](https://docs.rs/test-fork/badge.svg)](https://docs.rs/test-fork)
 
 test-fork
 =========
@@ -55,7 +56,7 @@ use test_fork::bench;
 
 #[bench]
 fn bench1(b: &mut Bencher) {
-    b.iter(|| sleep(Duration::from_millis(1)));
+  b.iter(|| sleep(Duration::from_millis(1)));
 }
 ```
 
