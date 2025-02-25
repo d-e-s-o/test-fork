@@ -21,15 +21,30 @@ fn trivial_with_err() -> Result<(), &'static str> {
 #[test_fork::test]
 #[should_panic]
 fn panicking_child() {
-    panic!("just testing a panic, nothing to see here");
+    panic!("just testing a panic, nothing to see here")
 }
 
 #[test_fork::test]
 #[should_panic]
 fn aborting_child() {
-    process::abort();
+    process::abort()
 }
 
 #[test_fork::fork]
 #[test]
 fn fork_attr() {}
+
+#[tokio::test]
+#[test_fork::test]
+async fn async_test() {}
+
+#[tokio::test]
+#[test_fork::fork]
+async fn async_test_fork_attr() {}
+
+#[tokio::test]
+#[test_fork::test]
+#[should_panic]
+async fn async_test_panicking() {
+    panic!("panic makes the world go 'round")
+}

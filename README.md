@@ -43,6 +43,20 @@ fn test2() {
 }
 ```
 
+#### Async Tests
+Both `#[test]` and `#[fork]` support `async` tests. However, they
+currently rely on a somewhat counter-intuitive ordering of attributes,
+with `#[test_fork::fork]` (or `#[test_fork::test]`) being the inner-most
+one, like so:
+```rust
+#[tokio::test]
+#[test_fork::fork]
+async fn test3() {
+  assert_eq!(2 + 4, 6);
+}
+```
+
+#### Benchmarks
 The crate also supports running `libtest` style benchmarks in a separate
 process. This functionality is available only when both the `unstable`
 and `unsound` features are enabled. The functionality is unstable

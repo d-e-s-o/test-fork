@@ -76,7 +76,7 @@ pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
     let inner_test = if has_test {
         quote! {}
     } else {
-        quote! { #[::core::prelude::v1::test]}
+        quote! { #[::core::prelude::v1::test] }
     };
 
     try_test(attr, input_fn, inner_test)
@@ -118,7 +118,7 @@ pub fn bench(attr: TokenStream, item: TokenStream) -> TokenStream {
     let inner_bench = if has_bench {
         quote! {}
     } else {
-        quote! { #[::core::prelude::v1::bench]}
+        quote! { #[::core::prelude::v1::bench] }
     };
 
     try_bench(attr, input_fn, inner_bench)

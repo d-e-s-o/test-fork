@@ -1,6 +1,7 @@
 Unreleased
 ----------
 - Build `docs.rs` documentation with all supported features
+- Documented `async` test support
 
 
 0.1.2
