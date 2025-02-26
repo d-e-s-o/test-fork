@@ -44,6 +44,7 @@ test-fork-core = { version = "=0.1.2", path = "core" }
 test-fork-macros = { version = "=0.1.2", path = "macros" }
 
 [dev-dependencies]
+tokio = { version = "1.0", features = ["rt", "macros"] }
 trybuild = "1.0"
 
 # See https://docs.rs/about/metadata
