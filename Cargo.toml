@@ -7,7 +7,7 @@ members = [
 
 [package]
 name = "test-fork"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Daniel Mueller <deso@posteo.net>"]
 edition = "2021"
 license = "Apache-2.0 OR MIT"
@@ -40,8 +40,8 @@ name = "unstable"
 required-features = ["unstable", "unsound"]
 
 [dependencies]
-test-fork-core = { version = "=0.1.2", path = "core" }
-test-fork-macros = { version = "=0.1.2", path = "macros" }
+test-fork-core = { version = "=0.1.3", path = "core" }
+test-fork-macros = { version = "=0.1.3", path = "macros" }
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["rt", "macros"] }
