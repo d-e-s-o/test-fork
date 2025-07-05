@@ -23,7 +23,7 @@ use std::hash::Hasher;
 /// which is stable across processes of the same executable.
 ///
 /// This is usually the best thing to pass for the `fork_id` argument of
-/// [`fork`][crate::fork].
+/// [`fork`][crate::fork()].
 ///
 /// The type of the expression this macro expands to is [`ForkId`].
 #[macro_export]
