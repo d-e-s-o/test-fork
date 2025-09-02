@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Specified minimum supported Rust version in manifest
+
+
 0.1.3
 -----
 - Build `docs.rs` documentation with all supported features

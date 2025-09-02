@@ -61,8 +61,8 @@ const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
 /// Panics if the environment indicates that there are already at least 16
 /// levels of fork nesting.
 ///
-/// Panics if `std::env::current_exe()` fails determine the path to the current
-/// executable.
+/// Panics if `std::env::current_exe()` fails to determine the path to
+/// the current executable.
 ///
 /// Panics if any argument to the current process is not valid UTF-8.
 pub fn fork<F, T>(fork_id: &str, test_name: &str, test: F) -> Result<()>

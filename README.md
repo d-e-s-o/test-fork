@@ -1,6 +1,7 @@
 [![pipeline](https://github.com/d-e-s-o/test-fork/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/d-e-s-o/test-fork/actions/workflows/test.yml)
 [![crates.io](https://img.shields.io/crates/v/test-fork.svg)](https://crates.io/crates/test-fork)
 [![Docs](https://docs.rs/test-fork/badge.svg)](https://docs.rs/test-fork)
+[![rustc](https://img.shields.io/badge/rustc-1.83+-blue.svg)](https://blog.rust-lang.org/2024/11/28/Rust-1.83.0/)
 
 test-fork
 =========
