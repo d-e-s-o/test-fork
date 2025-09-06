@@ -22,7 +22,7 @@ jobs:
         rust: [stable]
         profile: [dev, release]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
@@ -37,7 +37,7 @@ jobs:
     name: Test unstable functionality
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: dtolnay/rust-toolchain@nightly
     - uses: Swatinem/rust-cache@v2
     - name: Build & test
@@ -46,7 +46,7 @@ jobs:
     name: Build using minimum versions of dependencies
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Nightly Rust
         uses: dtolnay/rust-toolchain@nightly
       - run: cargo +nightly -Z minimal-versions update
@@ -62,7 +62,7 @@ jobs:
     name: Check code formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
@@ -71,7 +71,7 @@ jobs:
     name: Lint with clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: clippy
@@ -83,7 +83,7 @@ jobs:
     env:
       RUSTDOCFLAGS: '--cfg docsrs -D warnings -D rustdoc::broken_intra_doc_links'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
       - run: cargo doc --workspace --no-deps --document-private-items
