@@ -291,10 +291,6 @@ mod test {
     use super::*;
 
 
-    fn capturing_output(cmd: &mut process::Command) {
-        cmd.stdout(Stdio::piped()).stderr(Stdio::inherit());
-    }
-
     fn wait_for_child_output(child: &mut Child) -> String {
         let mut output = String::new();
         child
@@ -328,7 +324,7 @@ mod test {
         let output = fork_int(
             "fork::test::child_output_captured_and_repeated",
             fork_id!(),
-            capturing_output,
+            |_| (),
             wait_for_child_output,
             || {
                 fork_int(
