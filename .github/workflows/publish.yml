@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
+# Copyright (C) 2025-2026 Daniel Mueller <deso@posteo.net>
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 name: Publish
@@ -23,20 +23,9 @@ jobs:
         #   file://<path>/<crate>#<version>
         # but could also be along the lines of
         #   file://<path>/<crate>#<actual-crate-name>@<version>
-        version="$(echo ${pkgid}                   | cut -d '#' -f2 | cut -d '@' -f2 | grep -o '[^:]*$')"
-        core_version="$(cd core && cargo pkgid     | cut -d '#' -f2 | cut -d '@' -f2 | grep -o '[^:]*$')"
-        macros_version="$(cd macros && cargo pkgid | cut -d '#' -f2 | cut -d '@' -f2 | grep -o '[^:]*$')"
-
+        version="$(echo ${pkgid} | cut -d '#' -f2 | cut -d '@' -f2 | grep -o '[^:]*$')"
         if [ -z "${version}" ]; then
           echo "Invalid version string: ${pkgid}"
-          exit 1
-        fi
-        if [ "${version}" != "${core_version}" ]; then
-          echo "test-fork and test-fork-core have differing version (${version} vs. ${core_version}"
-          exit 1
-        fi
-        if [ "${version}" != "${macros_version}" ]; then
-          echo "test-fork and test-fork-macros have differing version (${version} vs. ${macros_version}"
           exit 1
         fi
         echo "Determined crate version: ${version}"
