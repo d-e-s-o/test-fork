@@ -1,5 +1,5 @@
-Unreleased
-----------
+0.1.4
+-----
 - Fixed deadlock for tests with excessive output
 - Specified minimum supported Rust version in manifest
 
