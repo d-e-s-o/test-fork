@@ -11,8 +11,6 @@
 // except according to those terms.
 
 use std::env;
-use std::io;
-use std::io::BufRead;
 use std::io::Read;
 use std::io::Write as _;
 use std::net::TcpListener;
@@ -33,12 +31,26 @@ const OCCURS_ENV: &str = "TEST_FORK_OCCURS";
 const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
 
 
-fn supervise_child(child: &mut Child) {
-    let status = child.wait().expect("failed to wait for child");
+fn supervise_child(child: Child) {
+    let output = child.wait_with_output().expect("failed to wait for child");
     assert!(
-        status.success(),
-        "child exited unsuccessfully with {status}"
+        output.status.success(),
+        "child exited unsuccessfully with {}",
+        output.status,
     );
+
+    // Make sure to forward output we captured to our own output, using
+    // print! and eprint! macros, which hook into the test output
+    // capture mechanism, to mimic default behavior.
+
+    if !output.stdout.is_empty() {
+        let s = String::from_utf8_lossy(&output.stdout);
+        print!("{s}");
+    }
+    if !output.stderr.is_empty() {
+        let s = String::from_utf8_lossy(&output.stderr);
+        eprint!("{s}");
+    }
 }
 
 
@@ -159,7 +171,7 @@ pub(crate) fn fork_int<M, P, C, R, T>(
 ) -> Result<R>
 where
     M: FnOnce(&mut process::Command),
-    P: FnOnce(&mut Child) -> R,
+    P: FnOnce(Child) -> R,
     T: Termination,
     C: FnOnce() -> T,
 {
@@ -185,7 +197,7 @@ fn fork_impl<T: Termination>(
     test_name: &str,
     fork_id: &str,
     process_modifier: &mut dyn FnMut(&mut process::Command),
-    in_parent: &mut dyn FnMut(&mut Child),
+    in_parent: &mut dyn FnMut(Child),
     in_child: &mut dyn FnMut() -> T,
 ) -> Result<()> {
     let mut occurs = env::var(OCCURS_ENV).unwrap_or_else(|_| String::new());
@@ -212,56 +224,6 @@ fn fork_impl<T: Termination>(
             panic!("test-fork: Not forking due to >=16 levels of recursion");
         }
 
-        struct KillOnDrop(Child);
-        impl Drop for KillOnDrop {
-            fn drop(&mut self) {
-                // Kill the child if it hasn't exited yet
-                let _result = self.0.kill();
-
-                // Copy the child's output to our own
-                // Awkwardly, `print!()` and `println!()` are our only gateway
-                // to putting things in the captured output. Generally test
-                // output really is text, so work on that assumption and read
-                // line-by-line, converting lossily into UTF-8 so we can
-                // println!() it.
-
-                fn drain(read: &mut dyn Read, stderr: bool) {
-                    let mut buf = Vec::new();
-                    let mut br = io::BufReader::new(read);
-                    loop {
-                        // We can't use read_line() or lines() since they break if
-                        // there's any non-UTF-8 output at all. \n occurs at the
-                        // end of the line endings on all major platforms, so we
-                        // can just use that as a delimiter.
-                        if br.read_until(b'\n', &mut buf).is_err() {
-                            break;
-                        }
-                        if buf.is_empty() {
-                            break;
-                        }
-
-                        // not println!() because we already have a line ending
-                        // from above.
-                        let s = String::from_utf8_lossy(&buf);
-                        if stderr {
-                            eprint!("{s}");
-                        } else {
-                            print!("{s}");
-                        }
-                        buf.clear();
-                    }
-                }
-
-                if let Some(stdout) = self.0.stdout.as_mut() {
-                    let () = drain(stdout, false);
-                }
-
-                if let Some(stderr) = self.0.stderr.as_mut() {
-                    let () = drain(stderr, true);
-                }
-            }
-        }
-
         occurs.push_str(fork_id);
         let mut command =
             process::Command::new(env::current_exe().expect("current_exe() failed, cannot fork"));
@@ -275,8 +237,8 @@ fn fork_impl<T: Termination>(
             .stderr(Stdio::piped());
         process_modifier(&mut command);
 
-        let mut child = command.spawn().map(KillOnDrop)?;
-        let () = in_parent(&mut child.0);
+        let child = command.spawn()?;
+        let () = in_parent(child);
 
         Ok(())
     }
@@ -288,15 +250,10 @@ mod test {
     use super::*;
 
 
-    fn wait_for_child_output(child: &mut Child) -> String {
-        let mut output = String::new();
-        child
-            .stdout
-            .as_mut()
-            .unwrap()
-            .read_to_string(&mut output)
-            .unwrap();
-        assert!(child.wait().unwrap().success());
+    fn wait_for_child_output(child: Child) -> String {
+        let output = child.wait_with_output().expect("failed to wait for child");
+        assert!(output.status.success());
+        let output = String::from_utf8(output.stdout).unwrap();
         output
     }
 
@@ -340,7 +297,7 @@ mod test {
             "fork::test::child_aborted_if_panics",
             fork_id!(),
             |_| (),
-            |child| child.wait().unwrap(),
+            |mut child| child.wait().unwrap(),
             || panic!("testing a panic, nothing to see here"),
         )
         .unwrap();

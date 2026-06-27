@@ -20,6 +20,15 @@ fn trivial_with_err() -> Result<(), &'static str> {
     Err("should fail.")
 }
 
+/// Test outputting a bunch of data to make sure we don't hit any
+/// issues or limits.
+#[test_fork::test]
+fn output_spam() {
+    for _ in 0..100000 {
+        println!("test");
+    }
+}
+
 #[test_fork::test]
 #[should_panic]
 fn panicking_child() {
