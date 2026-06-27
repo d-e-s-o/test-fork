@@ -33,6 +33,15 @@ const OCCURS_ENV: &str = "TEST_FORK_OCCURS";
 const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
 
 
+fn supervise_child(child: &mut Child) {
+    let status = child.wait().expect("failed to wait for child");
+    assert!(
+        status.success(),
+        "child exited unsuccessfully with {status}"
+    );
+}
+
+
 /// Simulate a process fork.
 ///
 /// Since this is not a true process fork, the calling code must be structured
@@ -73,14 +82,6 @@ where
     F: Fn() -> T,
     T: Termination,
 {
-    fn supervise_child(child: &mut Child) {
-        let status = child.wait().expect("failed to wait for child");
-        assert!(
-            status.success(),
-            "child exited unsuccessfully with {status}"
-        );
-    }
-
     fn no_configure_child(_child: &mut Command) {}
 
     fork_int(
@@ -122,11 +123,7 @@ where
             let () = stream
                 .read_exact(data)
                 .expect("failed to receive data from child");
-            let status = child.wait().expect("failed to wait for child");
-            assert!(
-                status.success(),
-                "child exited unsuccessfully with {status}"
-            );
+            supervise_child(child)
         },
         || {
             let addr = env::var(fork_id).unwrap_or_else(|err| {
@@ -303,17 +300,13 @@ mod test {
         output
     }
 
-    fn wait_for_child(child: &mut Child) {
-        assert!(child.wait().unwrap().success());
-    }
-
     #[test]
     fn fork_basically_works() {
         fork_int(
             "fork::test::fork_basically_works",
             fork_id!(),
             |_| (),
-            wait_for_child,
+            supervise_child,
             || println!("hello from child"),
         )
         .unwrap()
@@ -331,7 +324,7 @@ mod test {
                     "fork::test::child_output_captured_and_repeated",
                     fork_id!(),
                     |_| (),
-                    wait_for_child,
+                    supervise_child,
                     || println!("hello from child"),
                 )
                 .unwrap()
