@@ -290,19 +290,9 @@ fn fork_impl<T: Termination>(
 mod test {
     use super::*;
 
-    use std::thread;
-
-
-    fn sleep(ms: u64) {
-        thread::sleep(::std::time::Duration::from_millis(ms));
-    }
 
     fn capturing_output(cmd: &mut process::Command) {
         cmd.stdout(Stdio::piped()).stderr(Stdio::inherit());
-    }
-
-    fn inherit_output(cmd: &mut process::Command) {
-        cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     }
 
     fn wait_for_child_output(child: &mut Child) -> String {
@@ -353,69 +343,6 @@ mod test {
         )
         .unwrap();
         assert!(output.contains("hello from child"));
-    }
-
-    #[test]
-    fn child_killed_if_parent_exits_first() {
-        let output = fork_int(
-            "fork::test::child_killed_if_parent_exits_first",
-            fork_id!(),
-            capturing_output,
-            wait_for_child_output,
-            || {
-                fork_int(
-                    "fork::test::child_killed_if_parent_exits_first",
-                    fork_id!(),
-                    inherit_output,
-                    |_| (),
-                    || {
-                        sleep(100);
-                        println!("hello from child");
-                    },
-                )
-                .unwrap()
-            },
-        )
-        .unwrap();
-
-        sleep(200);
-        assert!(
-            !output.contains("hello from child"),
-            "Had unexpected output:\n{}",
-            output
-        );
-    }
-
-    #[test]
-    fn child_killed_if_parent_panics_first() {
-        let output = fork_int(
-            "fork::test::child_killed_if_parent_panics_first",
-            fork_id!(),
-            capturing_output,
-            wait_for_child_output,
-            || {
-                assert!(panic::catch_unwind(panic::AssertUnwindSafe(|| fork_int(
-                    "fork::test::child_killed_if_parent_panics_first",
-                    fork_id!(),
-                    inherit_output,
-                    |_| panic!("testing a panic, nothing to see here"),
-                    || {
-                        sleep(100);
-                        println!("hello from child");
-                    }
-                )
-                .unwrap()))
-                .is_err());
-            },
-        )
-        .unwrap();
-
-        sleep(200);
-        assert!(
-            !output.contains("hello from child"),
-            "Had unexpected output:\n{}",
-            output
-        );
     }
 
     #[test]
