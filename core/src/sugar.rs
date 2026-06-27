@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2025-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 //-
@@ -36,14 +36,13 @@ macro_rules! fork_id {
 
 
 /// The type of the value produced by [`fork_id!`].
-#[derive(Clone, Hash, PartialEq, Debug)]
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct ForkId(TypeId);
 
 impl ForkId {
-    #[allow(missing_docs)]
     #[doc(hidden)]
     pub fn of(id: TypeId) -> Self {
-        ForkId(id)
+        Self(id)
     }
 }
 

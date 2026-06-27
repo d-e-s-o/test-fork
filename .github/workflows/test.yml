@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
+# Copyright (C) 2025-2026 Daniel Mueller <deso@posteo.net>
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 name: Test
@@ -76,7 +76,7 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --no-deps --all-targets --all-features -- -A unknown_lints -D warnings
+      - run: cargo clippy --no-deps --workspace --all-targets --all-features -- -A unknown_lints -D warnings
   rustdoc:
     name: Generate documentation
     runs-on: ubuntu-latest

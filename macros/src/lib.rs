@@ -1,9 +1,10 @@
-// Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2025-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
+//! The procedural macro powering `test-fork`.
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-extern crate proc_macro;
 
 use std::ops::Deref as _;
 
@@ -209,6 +210,8 @@ fn is_attribute_kind(kind: Kind, attr: &Attribute) -> bool {
         ["core", "prelude", "*", kind.as_str()],
         ["std", "prelude", "*", kind.as_str()],
     ];
+
+    #[expect(clippy::indexing_slicing)]
     if path.leading_colon.is_none()
         && path.segments.len() == 1
         && path.segments[0].arguments.is_none()
@@ -271,7 +274,7 @@ fn parse_bench_sig(sig: &Signature) -> Option<(Pat, Type)> {
         return None
     }
 
-    if let FnArg::Typed(pat_type) = sig.inputs.first().unwrap() {
+    if let FnArg::Typed(pat_type) = sig.inputs.first()? {
         let ty = match pat_type.ty.deref() {
             Type::Reference(ty_ref) => ty_ref.elem.clone(),
             _ => return None,

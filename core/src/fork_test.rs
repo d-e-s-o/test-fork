@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2025-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 //-
@@ -25,5 +25,5 @@ macro_rules! fork_test_name {
 /// `module_path!()` into a qualified path as expected by the standard Rust
 /// test harness.
 pub fn fix_module_path(path: &str) -> &str {
-    path.find("::").map(|ix| &path[ix + 2..]).unwrap_or(path)
+    path.split_once("::").map(|(_, rest)| rest).unwrap_or(path)
 }

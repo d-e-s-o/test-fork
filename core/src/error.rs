@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2025-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 //-
@@ -14,6 +14,7 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Result as FmtResult;
 use std::io;
+use std::result;
 
 
 /// Enum for errors produced by the rusty-fork crate.
@@ -32,6 +33,7 @@ pub enum Error {
     /// about why the flag could not be handled.
     DisallowedFlag(String, String),
     /// Spawning a subprocess failed.
+    #[expect(clippy::enum_variant_names)]
     SpawnError(io::Error),
 }
 
@@ -44,17 +46,17 @@ impl From<io::Error> for Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match *self {
-            Error::UnknownFlag(ref flag) => {
+            Self::UnknownFlag(ref flag) => {
                 f.write_fmt(format_args!(
                     "The flag '{flag}' was passed to the Rust test process, but rusty-fork does not know how to handle it."
                 ))
             },
-            Error::DisallowedFlag(ref flag, ref message) => {
+            Self::DisallowedFlag(ref flag, ref message) => {
                 f.write_fmt(format_args!(
                     "The flag '{flag}' was passed to the Rust test process, but rusty-fork cannot handle it; reason: {message}"
                 ))
             },
-            Error::SpawnError(ref err) => {
+            Self::SpawnError(ref err) => {
                 f.write_fmt(format_args!("Spawn failed: {err}"))
             },
         }
@@ -62,5 +64,5 @@ impl Display for Error {
 }
 
 
-/// General `Result` type for rusty-fork.
-pub type Result<T> = ::std::result::Result<T, Error>;
+/// General `Result` type for `test-fork`.
+pub type Result<T> = result::Result<T, Error>;

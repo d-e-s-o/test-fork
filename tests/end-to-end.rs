@@ -1,5 +1,7 @@
-// Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2025-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
+//! End-to-end tests for [`test-fork`].
 
 use std::process;
 

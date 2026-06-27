@@ -77,8 +77,7 @@ where
         let status = child.wait().expect("failed to wait for child");
         assert!(
             status.success(),
-            "child exited unsuccessfully with {}",
-            status
+            "child exited unsuccessfully with {status}"
         );
     }
 
@@ -97,6 +96,7 @@ where
 ///
 /// This function is similar to [`fork`], except that it allows for data
 /// exchange with the child process.
+#[expect(clippy::panic_in_result_fn, clippy::unwrap_in_result)]
 pub fn fork_in_out<F, T>(fork_id: &str, test_name: &str, test: F, data: &mut [u8]) -> Result<()>
 where
     F: Fn(&mut [u8]) -> T,
@@ -125,8 +125,7 @@ where
             let status = child.wait().expect("failed to wait for child");
             assert!(
                 status.success(),
-                "child exited unsuccessfully with {}",
-                status
+                "child exited unsuccessfully with {status}"
             );
         },
         || {
@@ -181,9 +180,10 @@ where
         &mut |child| return_value = Some(in_parent.take().unwrap()(child)),
         &mut || in_child.take().unwrap()(),
     )
-    .map(|_| return_value.unwrap())
+    .map(|()| return_value.unwrap())
 }
 
+#[expect(clippy::panic_in_result_fn, clippy::unwrap_in_result)]
 fn fork_impl<T: Termination>(
     test_name: &str,
     fork_id: &str,
@@ -219,7 +219,7 @@ fn fork_impl<T: Termination>(
         impl Drop for KillOnDrop {
             fn drop(&mut self) {
                 // Kill the child if it hasn't exited yet
-                let _ = self.0.kill();
+                let _result = self.0.kill();
 
                 // Copy the child's output to our own
                 // Awkwardly, `print!()` and `println!()` are our only gateway

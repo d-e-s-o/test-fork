@@ -5,6 +5,51 @@ members = [
   "macros",
 ]
 
+[workspace.lints.rust]
+deprecated-safe = "warn"
+future-incompatible = "warn"
+keyword-idents = "warn"
+let-underscore = "warn"
+missing-debug-implementations = "warn"
+missing-docs = "warn"
+trivial-numeric-casts = "warn"
+unsafe-op-in-unsafe-fn = "warn"
+unused = "warn"
+
+[workspace.lints.clippy]
+collapsible-else-if = "allow"
+collapsible-if = "allow"
+diverging-sub-expression = "allow"
+let-and-return = "allow"
+let-unit-value = "allow"
+module-inception = "allow"
+type-complexity = "allow"
+absolute-paths = "warn"
+allow-attributes = "warn"
+cast-sign-loss = "warn"
+clone-on-ref-ptr = "warn"
+dbg-macro = "warn"
+debug-assert-with-mut-call = "warn"
+derive-partial-eq-without-eq = "warn"
+doc-markdown = "warn"
+indexing-slicing = "warn"
+invalid-upcast-comparisons = "warn"
+join-absolute-paths = "warn"
+large-enum-variant = "warn"
+let-underscore-must-use = "warn"
+lossy-float-literal = "warn"
+multiple-unsafe-ops-per-block = "warn"
+panic-in-result-fn = "warn"
+ptr-as-ptr = "warn"
+redundant-closure-for-method-calls = "warn"
+string-slice = "warn"
+unchecked-time-subtraction = "warn"
+undocumented-unsafe-blocks = "warn"
+uninlined-format-args = "warn"
+unwrap-in-result = "warn"
+use-self = "warn"
+wildcard-imports = "warn"
+
 [package]
 name = "test-fork"
 version = "0.1.3"
@@ -47,6 +92,9 @@ test-fork-macros = { version = "=0.1.3", path = "macros" }
 [dev-dependencies]
 tokio = { version = "1.0", features = ["rt", "macros"] }
 trybuild = "1.0"
+
+[lints]
+workspace = true
 
 # See https://docs.rs/about/metadata
 [package.metadata.docs.rs]

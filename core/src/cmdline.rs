@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2025-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 //-
@@ -14,7 +14,9 @@
 
 use std::env;
 
-use crate::error::*;
+use crate::error::Error;
+use crate::error::Result;
+
 
 /// How a hyphen-prefixed argument passed to the parent process should be
 /// handled when constructing the command-line for the child process.
@@ -174,7 +176,7 @@ pub(crate) fn strip_cmdline<A: Iterator<Item = String>>(args: A) -> Result<Vec<S
 
                     chars.next(); // skip initial '-'
                     while let Some(flag_ch) = chars.next() {
-                        let flag = format!("-{}", flag_ch);
+                        let flag = format!("-{flag_ch}");
                         let (pass, has_arg) = look_up_flag_or_err(&flag)?;
                         if pass {
                             to_pass.push(flag_ch);
@@ -231,11 +233,13 @@ pub(crate) static RUN_TEST_ARGS: &[&str] = &[
 mod test {
     use super::*;
 
+    use std::borrow::ToOwned;
+
     use crate::fork;
 
 
     fn strip(cmdline: &str) -> Result<String> {
-        strip_cmdline(cmdline.split_whitespace().map(|s| s.to_owned())).map(|strs| strs.join(" "))
+        strip_cmdline(cmdline.split_whitespace().map(ToOwned::to_owned)).map(|strs| strs.join(" "))
     }
 
     #[test]
@@ -265,11 +269,11 @@ mod test {
 
         match strip("test --plugh").unwrap_err() {
             Error::UnknownFlag(ref flag) => assert_eq!("--plugh", flag),
-            e => panic!("Unexpected error: {}", e),
+            e => panic!("Unexpected error: {e}"),
         }
         match strip("test --help").unwrap_err() {
             Error::DisallowedFlag(ref flag, _) => assert_eq!("--help", flag),
-            e => panic!("Unexpected error: {}", e),
+            e => panic!("Unexpected error: {e}"),
         }
     }
 
@@ -278,10 +282,18 @@ mod test {
         // Run in subprocess so we can change the environment without
         // affecting other tests.
         fork(fork_id!(), fork_test_name!(define_args_via_env), || {
-            env::set_var("TEST_FORK_FLAG_X", "pass");
-            env::set_var("TEST_FORK_FLAG_FOO", "pass-arg");
-            env::set_var("TEST_FORK_FLAG_BAR", "drop");
-            env::set_var("TEST_FORK_FLAG_BAZ", "drop-arg");
+            // SAFETY: We are running in a single threaded processes
+            //         after we worked.
+            unsafe { env::set_var("TEST_FORK_FLAG_X", "pass") };
+            // SAFETY: We are running in a single threaded processes
+            //         after we worked.
+            unsafe { env::set_var("TEST_FORK_FLAG_FOO", "pass-arg") };
+            // SAFETY: We are running in a single threaded processes
+            //         after we worked.
+            unsafe { env::set_var("TEST_FORK_FLAG_BAR", "drop") };
+            // SAFETY: We are running in a single threaded processes
+            //         after we worked.
+            unsafe { env::set_var("TEST_FORK_FLAG_BAZ", "drop-arg") };
 
             assert_eq!("-X", &strip("test -X foo").unwrap());
             assert_eq!("--foo bar", &strip("test --foo bar").unwrap());
