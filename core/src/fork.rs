@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2025-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 //-
@@ -323,15 +323,14 @@ mod test {
 
     #[test]
     fn fork_basically_works() {
-        let status = fork_int(
+        fork_int(
             "fork::test::fork_basically_works",
             fork_id!(),
             |_| (),
-            |child| child.wait().unwrap(),
+            wait_for_child,
             || println!("hello from child"),
         )
-        .unwrap();
-        assert!(status.success());
+        .unwrap()
     }
 
     #[test]
