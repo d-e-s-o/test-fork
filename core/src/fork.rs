@@ -292,8 +292,6 @@ mod test {
 
     use std::thread;
 
-    use crate::fork_id;
-
 
     fn sleep(ms: u64) {
         thread::sleep(::std::time::Duration::from_millis(ms));
