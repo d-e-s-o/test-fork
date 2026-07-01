@@ -3,7 +3,7 @@ source: core/tests/snapshots.rs
 expression: output
 ---
 #[::core::prelude::v1::bench]
-fn bench_it(b: &mut Bencher) {
+fn bench_it(b: &mut Bencher) -> ::std::process::ExitCode {
     fn body_fn(b: &mut Bencher) {
         let () = b.iter(|| 2 + 2);
     }

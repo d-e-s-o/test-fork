@@ -10,6 +10,7 @@ use proc_macro2::TokenStream as Tokens;
 use quote::quote;
 use quote::ToTokens as _;
 
+use syn::parse_quote;
 use syn::Attribute;
 use syn::Error;
 use syn::FnArg;
@@ -71,6 +72,15 @@ fn is_attribute_kind(kind: Kind, attr: &Attribute) -> bool {
 }
 
 
+/// Check whether the given attribute is a `#[should_panic]` attribute.
+fn is_should_panic(attr: &Attribute) -> bool {
+    match &attr.meta {
+        syn::Meta::Path(path) => path.is_ident("should_panic"),
+        _ => false,
+    }
+}
+
+
 /// Testable implementation of the `#[test]` attribute's core logic.
 pub fn try_test(attr: Tokens, input_fn: ItemFn) -> Result<Tokens> {
     let has_test = input_fn
@@ -104,10 +114,42 @@ fn try_test_inner(attr: Tokens, input_fn: ItemFn, inner_test: Tokens) -> Result<
     let test_name = sig.ident.clone();
     let mut body_fn_sig = sig.clone();
     body_fn_sig.ident = Ident::new("body_fn", Span::call_site());
-    // Our tests currently basically have to return (), because we don't
-    // have a good way of conveying the result back from the child
-    // process.
-    sig.output = ReturnType::Default;
+
+    let fork_call = quote! {
+        ::test_fork::test_fork_core::fork(
+            ::test_fork::test_fork_core::fork_id!(),
+            ::test_fork::test_fork_core::fork_test_name!(#test_name),
+            body_fn as fn() -> _,
+        ).expect("forking test failed")
+    };
+
+    let (output, tail) = if attrs.iter().any(is_should_panic) {
+        // `#[should_panic]` requires the test function to return `()`,
+        // and libtest decides pass/fail based on whether the function
+        // panics. The actual test body runs in the forked child, so we
+        // translate a failing child (which includes a panicking one)
+        // back into a panic here, which libtest's `#[should_panic]`
+        // handling then observes.
+        // TODO: This isn't super clean, because we could conceivably
+        //       report an error for other reasons or panic due to a
+        //       test-fork setup failure, but it seems the best we can
+        //       do?
+        (
+            ReturnType::Default,
+            quote! {
+                ::std::assert_eq!(#fork_call, ::std::process::ExitCode::SUCCESS);
+            },
+        )
+    } else {
+        // Our test "shims" otherwise map actual test success/failure to
+        // a mere `ExitCode`. This way, we introduce the least
+        // perturbance compared to, say, `std::process::exit` or
+        // `panic`, both of which would be caught by libtest's harness
+        // and result in additional output (confusing error messages or
+        // additional backtraces, respectively).
+        (parse_quote!(-> ::std::process::ExitCode), fork_call)
+    };
+    sig.output = output;
 
     let augmented_test = quote! {
         #inner_test
@@ -116,11 +158,7 @@ fn try_test_inner(attr: Tokens, input_fn: ItemFn, inner_test: Tokens) -> Result<
             #body_fn_sig
             #block
 
-            ::test_fork::test_fork_core::fork(
-                ::test_fork::test_fork_core::fork_id!(),
-                ::test_fork::test_fork_core::fork_test_name!(#test_name),
-                body_fn as fn() -> _,
-            ).expect("forking test failed")
+            #tail
         }
     };
 
@@ -183,7 +221,7 @@ fn try_bench_inner(attr: Tokens, input_fn: ItemFn, inner_bench: Tokens) -> Resul
     let test_name = sig.ident.clone();
     let mut body_fn_sig = sig.clone();
     body_fn_sig.ident = Ident::new("body_fn", Span::call_site());
-    sig.output = ReturnType::Default;
+    sig.output = parse_quote!(-> ::std::process::ExitCode);
 
     let augmented_bench = quote! {
         #inner_bench

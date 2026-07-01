@@ -1,0 +1,16 @@
+---
+source: core/tests/snapshots.rs
+expression: output
+---
+#[::core::prelude::v1::test]
+#[should_panic]
+fn it_panics() {
+    fn body_fn() {
+        panic!("boom");
+    }
+    ::std::assert_eq!(
+        ::test_fork::test_fork_core::fork(::test_fork::test_fork_core::fork_id!(),
+        ::test_fork::test_fork_core::fork_test_name!(it_panics), body_fn as fn () -> _,)
+        .expect("forking test failed"), ::std::process::ExitCode::SUCCESS
+    );
+}

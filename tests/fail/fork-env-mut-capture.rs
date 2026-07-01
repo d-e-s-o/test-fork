@@ -1,5 +1,7 @@
-// Copyright (C) 2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2025-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
+use std::process::ExitCode;
 
 use test_fork_core::fork;
 use test_fork_core::fork_id;
@@ -10,10 +12,12 @@ use test_fork_core::fork_id;
 fn env_mut_capture() {
     let mut x = 0;
 
-    fork(fork_id!(), "env_mut_capture", || {
+    let status = fork(fork_id!(), "env_mut_capture", || {
         x += 1;
     })
-    .unwrap()
+    .unwrap();
+
+    assert_eq!(status, ExitCode::SUCCESS);
 }
 
 fn main() {}
