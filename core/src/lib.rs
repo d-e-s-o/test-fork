@@ -19,9 +19,14 @@ mod fork_test;
 mod cmdline;
 mod error;
 mod fork;
+mod procmac;
 
 pub use crate::fork::fork;
 pub use crate::fork::fork_in_out;
 #[doc(hidden)]
 pub use crate::fork_test::fix_module_path;
 pub use crate::sugar::ForkId;
+
+pub use crate::procmac::try_bench;
+pub use crate::procmac::try_fork;
+pub use crate::procmac::try_test;

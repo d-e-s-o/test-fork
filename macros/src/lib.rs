@@ -6,43 +6,15 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 
-use std::ops::Deref as _;
-
 use proc_macro::TokenStream;
-use proc_macro2::Ident;
-use proc_macro2::Span;
-use proc_macro2::TokenStream as Tokens;
-
-use quote::quote;
-use quote::ToTokens as _;
 
 use syn::parse_macro_input;
-use syn::Attribute;
-use syn::Error;
-use syn::FnArg;
 use syn::ItemFn;
-use syn::Pat;
-use syn::Result;
-use syn::ReturnType;
-use syn::Signature;
-use syn::Type;
 
-
-#[derive(Debug)]
-enum Kind {
-    Test,
-    Bench,
-}
-
-impl Kind {
-    #[inline]
-    fn as_str(&self) -> &str {
-        match self {
-            Self::Test => "test",
-            Self::Bench => "bench",
-        }
-    }
-}
+#[cfg(all(feature = "unstable", feature = "unsound"))]
+use test_fork_core::try_bench;
+use test_fork_core::try_fork;
+use test_fork_core::try_test;
 
 
 /// A procedural macro for running a test in a separate process.
@@ -70,7 +42,7 @@ impl Kind {
 pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
 
-    try_test(attr, input_fn)
+    try_test(attr.into(), input_fn)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
@@ -102,7 +74,7 @@ pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn bench(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
 
-    try_bench(attr, input_fn)
+    try_bench(attr.into(), input_fn)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
@@ -144,225 +116,7 @@ pub fn fork(attr: TokenStream, item: TokenStream) -> TokenStream {
     let supports_bench = cfg!(all(feature = "unstable", feature = "unsound"));
     let input_fn = parse_macro_input!(item as ItemFn);
 
-    try_fork(attr, input_fn, supports_bench)
+    try_fork(attr.into(), input_fn, supports_bench)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
-}
-
-
-/// Check whether given attribute is a test or bench attribute of the
-/// form:
-/// - `#[<kind>]`
-/// - `#[core::prelude::*::<kind>]` or `#[::core::prelude::*::<kind>]`
-/// - `#[std::prelude::*::<kind>]` or `#[::std::prelude::*::<kind>]`
-fn is_attribute_kind(kind: Kind, attr: &Attribute) -> bool {
-    let path = match &attr.meta {
-        syn::Meta::Path(path) => path,
-        _ => return false,
-    };
-    let candidates = [
-        ["core", "prelude", "*", kind.as_str()],
-        ["std", "prelude", "*", kind.as_str()],
-    ];
-
-    #[expect(clippy::indexing_slicing)]
-    if path.leading_colon.is_none()
-        && path.segments.len() == 1
-        && path.segments[0].arguments.is_none()
-        && path.segments[0].ident == kind.as_str()
-    {
-        return true;
-    } else if path.segments.len() != candidates[0].len() {
-        return false;
-    }
-    candidates.into_iter().any(|segments| {
-        path.segments.iter().zip(segments).all(|(segment, path)| {
-            segment.arguments.is_none() && (path == "*" || segment.ident == path)
-        })
-    })
-}
-
-
-fn try_test(attr: TokenStream, input_fn: ItemFn) -> Result<Tokens> {
-    let has_test = input_fn
-        .attrs
-        .iter()
-        .any(|attr| is_attribute_kind(Kind::Test, attr));
-    let inner_test = if has_test {
-        quote! {}
-    } else {
-        quote! { #[::core::prelude::v1::test] }
-    };
-
-    try_test_inner(attr, input_fn, inner_test)
-}
-
-fn try_test_inner(attr: TokenStream, input_fn: ItemFn, inner_test: Tokens) -> Result<Tokens> {
-    if !attr.is_empty() {
-        return Err(Error::new_spanned(
-            Tokens::from(attr),
-            "the attribute does not currently accept arguments",
-        ))
-    }
-
-    let ItemFn {
-        attrs,
-        vis,
-        mut sig,
-        block,
-    } = input_fn;
-
-    let test_name = sig.ident.clone();
-    let mut body_fn_sig = sig.clone();
-    body_fn_sig.ident = Ident::new("body_fn", Span::call_site());
-    // Our tests currently basically have to return (), because we don't
-    // have a good way of conveying the result back from the child
-    // process.
-    sig.output = ReturnType::Default;
-
-    let augmented_test = quote! {
-        #inner_test
-        #(#attrs)*
-        #vis #sig {
-            #body_fn_sig
-            #block
-
-            ::test_fork::test_fork_core::fork(
-                ::test_fork::test_fork_core::fork_id!(),
-                ::test_fork::test_fork_core::fork_test_name!(#test_name),
-                body_fn as fn() -> _,
-            ).expect("forking test failed")
-        }
-    };
-
-    Ok(augmented_test)
-}
-
-fn parse_bench_sig(sig: &Signature) -> Option<(Pat, Type)> {
-    if sig.inputs.len() != 1 {
-        return None
-    }
-
-    if let FnArg::Typed(pat_type) = sig.inputs.first()? {
-        let ty = match pat_type.ty.deref() {
-            Type::Reference(ty_ref) => ty_ref.elem.clone(),
-            _ => return None,
-        };
-        Some((*pat_type.pat.clone(), *ty))
-    } else {
-        None
-    }
-}
-
-#[cfg(all(feature = "unstable", feature = "unsound"))]
-fn try_bench(attr: TokenStream, input_fn: ItemFn) -> Result<Tokens> {
-    let has_bench = input_fn
-        .attrs
-        .iter()
-        .any(|attr| is_attribute_kind(Kind::Bench, attr));
-    let inner_bench = if has_bench {
-        quote! {}
-    } else {
-        quote! { #[::core::prelude::v1::bench] }
-    };
-
-    try_bench_inner(attr, input_fn, inner_bench)
-}
-
-fn try_bench_inner(attr: TokenStream, input_fn: ItemFn, inner_bench: Tokens) -> Result<Tokens> {
-    if !attr.is_empty() {
-        return Err(Error::new_spanned(
-            Tokens::from(attr),
-            "the attribute does not currently accept arguments",
-        ))
-    }
-
-    let ItemFn {
-        attrs,
-        vis,
-        mut sig,
-        block,
-    } = input_fn;
-
-    let (bencher_name, bencher_ty) = parse_bench_sig(&sig).ok_or_else(|| {
-        Error::new_spanned(
-            sig.to_token_stream(),
-            "benchmark function has unexpected signature (expected single `&mut Bencher` argument)",
-        )
-    })?;
-
-    let test_name = sig.ident.clone();
-    let mut body_fn_sig = sig.clone();
-    body_fn_sig.ident = Ident::new("body_fn", Span::call_site());
-    sig.output = ReturnType::Default;
-
-    let augmented_bench = quote! {
-        #inner_bench
-        #(#attrs)*
-        #vis #sig {
-            #body_fn_sig
-            #block
-
-            use ::std::mem::size_of;
-            use ::std::mem::transmute;
-
-            type BencherBuf = [u8; size_of::<#bencher_ty>()];
-
-            // SAFETY: Probably unsound. We can't guarantee that the
-            //         `Bencher` type is just a bunch of bytes that we
-            //         can copy around. And yet, that's the best we can
-            //         do.
-            let buf_ref = unsafe {
-                transmute::<&mut #bencher_ty, &mut BencherBuf>(#bencher_name)
-            };
-
-            fn wrapper_fn(buf_ref: &mut [u8]) {
-                let buf_ref = <&mut BencherBuf>::try_from(buf_ref).unwrap();
-                // SAFETY: See above.
-                let bench_ref = unsafe {
-                    transmute::<&mut BencherBuf, &mut #bencher_ty>(buf_ref)
-                };
-                let () = body_fn(bench_ref);
-            }
-
-            ::test_fork::test_fork_core::fork_in_out(
-                ::test_fork::test_fork_core::fork_id!(),
-                ::test_fork::test_fork_core::fork_test_name!(#test_name),
-                wrapper_fn as fn(&mut [u8]) -> _,
-                buf_ref,
-            ).expect("forking test failed")
-        }
-    };
-
-    Ok(augmented_bench)
-}
-
-fn try_fork(attr: TokenStream, input_fn: ItemFn, supports_bench: bool) -> Result<Tokens> {
-    let has_test = input_fn
-        .attrs
-        .iter()
-        .any(|attr| is_attribute_kind(Kind::Test, attr));
-    let has_bench = supports_bench
-        && input_fn
-            .attrs
-            .iter()
-            .any(|attr| is_attribute_kind(Kind::Bench, attr));
-
-    let inner_attr = quote! {};
-    if has_test {
-        try_test_inner(attr, input_fn, inner_attr)
-    } else if has_bench {
-        try_bench_inner(attr, input_fn, inner_attr)
-    } else {
-        let inner_attr = if parse_bench_sig(&input_fn.sig).is_some() {
-            "#[bench]"
-        } else {
-            "#[test]"
-        };
-
-        Err(Error::new_spanned(
-            Tokens::from(attr),
-            format!("test_fork::fork requires an inner {inner_attr} attribute"),
-        ))
-    }
 }
