@@ -31,6 +31,9 @@ jobs:
         key: ${{ matrix.profile }}
     - name: Build & test
       run: |
+        # Workaround to silence rust-cache's broken logic assuming this
+        # directory exists and printing an "error" otherwise.
+        mkdir -p target/tests/target
         cargo build --workspace --profile=${{ matrix.profile }}
         cargo test --workspace --profile=${{ matrix.profile }}
   test-unstable:
