@@ -11,6 +11,7 @@
 // except according to those terms.
 
 use std::env;
+use std::io;
 use std::io::Read;
 use std::io::Write as _;
 use std::net::TcpListener;
@@ -22,37 +23,83 @@ use std::process::Command;
 use std::process::ExitCode;
 use std::process::Stdio;
 use std::process::Termination;
+use std::thread;
 
 use crate::cmdline;
 use crate::error::Result;
 
-
 const OCCURS_ENV: &str = "TEST_FORK_OCCURS";
 const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
 
+fn supervise_child(mut child: Child) {
+    let exit_status = if parent_requested_nocapture() {
+        // If nocapture was requested, pipe the stdout and stderr of the child
+        // directly so the test output is immedaitely visible
+        let stdout_thread = spawn_forwarder(child.stdout.take(), || io::stdout().lock(), "stdout");
+        let stderr_thread = spawn_forwarder(child.stderr.take(), || io::stderr().lock(), "stderr");
 
-fn supervise_child(child: Child) {
-    let output = child.wait_with_output().expect("failed to wait for child");
+        let status = child.wait().expect("failed to wait for child");
+        let () = join_forwarder_thread(stdout_thread, "stdout");
+        let () = join_forwarder_thread(stderr_thread, "stderr");
+
+        status
+    } else {
+        let output = child.wait_with_output().expect("failed to wait for child");
+
+        // Make sure to forward output we captured to our own output, using
+        // print! and eprint! macros, which hook into the test output
+        // capture mechanism, to mimic default behavior.
+        if !output.stdout.is_empty() {
+            let s = String::from_utf8_lossy(&output.stdout);
+            print!("{s}");
+        }
+        if !output.stderr.is_empty() {
+            let s = String::from_utf8_lossy(&output.stderr);
+            eprint!("{s}");
+        }
+
+        output.status
+    };
+
     assert!(
-        output.status.success(),
-        "child exited unsuccessfully with {}",
-        output.status,
+        exit_status.success(),
+        "child exited unsuccessfully with {exit_status}",
     );
-
-    // Make sure to forward output we captured to our own output, using
-    // print! and eprint! macros, which hook into the test output
-    // capture mechanism, to mimic default behavior.
-
-    if !output.stdout.is_empty() {
-        let s = String::from_utf8_lossy(&output.stdout);
-        print!("{s}");
-    }
-    if !output.stderr.is_empty() {
-        let s = String::from_utf8_lossy(&output.stderr);
-        eprint!("{s}");
-    }
 }
 
+fn parent_requested_nocapture() -> bool {
+    env::args().any(|arg| arg == "--nocapture" || arg.starts_with("--nocapture="))
+        || env::var("RUST_TEST_NOCAPTURE")
+            .map(|value| value != "0")
+            .unwrap_or(false)
+}
+
+fn spawn_forwarder<R, W, O>(
+    input: Option<R>,
+    output: O,
+    stream_name: &'static str,
+) -> Option<thread::JoinHandle<()>>
+where
+    R: Read + Send + 'static,
+    W: io::Write,
+    O: FnOnce() -> W + Send + 'static,
+{
+    input.map(|mut input| {
+        thread::spawn(move || {
+            let mut output = output();
+            let _ = io::copy(&mut input, &mut output)
+                .unwrap_or_else(|_| panic!("failed to pipe child {stream_name}"));
+        })
+    })
+}
+
+fn join_forwarder_thread(handle: Option<thread::JoinHandle<()>>, stream_name: &str) {
+    if let Some(handle) = handle {
+        let () = handle
+            .join()
+            .unwrap_or_else(|_| panic!("failed to join {stream_name} thread"));
+    }
+}
 
 /// Simulate a process fork.
 ///
@@ -244,11 +291,9 @@ fn fork_impl<T: Termination>(
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
-
 
     fn wait_for_child_output(child: Child) -> String {
         let output = child.wait_with_output().expect("failed to wait for child");
