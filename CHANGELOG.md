@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Improved output on inner test failure
+
+
 0.1.4
 -----
 - Fixed deadlock for tests with excessive output

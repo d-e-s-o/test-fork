@@ -234,6 +234,7 @@ mod test {
     use super::*;
 
     use std::borrow::ToOwned;
+    use std::process::ExitCode;
 
     use crate::fork;
 
@@ -281,7 +282,7 @@ mod test {
     fn define_args_via_env() {
         // Run in subprocess so we can change the environment without
         // affecting other tests.
-        fork(fork_id!(), fork_test_name!(define_args_via_env), || {
+        let status = fork(fork_id!(), fork_test_name!(define_args_via_env), || {
             // SAFETY: We are running in a single threaded processes
             //         after we worked.
             unsafe { env::set_var("TEST_FORK_FLAG_X", "pass") };
@@ -300,6 +301,8 @@ mod test {
             assert_eq!("", &strip("test --bar").unwrap());
             assert_eq!("", &strip("test --baz --notaflag").unwrap());
         })
-        .unwrap()
+        .unwrap();
+
+        assert_eq!(status, ExitCode::SUCCESS);
     }
 }

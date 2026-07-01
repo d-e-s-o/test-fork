@@ -31,13 +31,10 @@ const OCCURS_ENV: &str = "TEST_FORK_OCCURS";
 const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
 
 
-fn supervise_child(child: Child) {
+/// Supervise a child process and indicate its success/failure to the
+/// caller.
+fn supervise_child(child: Child) -> ExitCode {
     let output = child.wait_with_output().expect("failed to wait for child");
-    assert!(
-        output.status.success(),
-        "child exited unsuccessfully with {}",
-        output.status,
-    );
 
     // Make sure to forward output we captured to our own output, using
     // print! and eprint! macros, which hook into the test output
@@ -50,6 +47,12 @@ fn supervise_child(child: Child) {
     if !output.stderr.is_empty() {
         let s = String::from_utf8_lossy(&output.stderr);
         eprint!("{s}");
+    }
+
+    if output.status.success() {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
     }
 }
 
@@ -74,10 +77,9 @@ fn supervise_child(child: Child) {
 /// `test_name` must exactly match the full path of the test function being
 /// run.
 ///
-/// If `test` panics, the child process exits with a failure code immediately
-/// rather than let the panic propagate out of the `fork()` call.
+/// The returned `ExitCode` indicates the success/failure of `test`.
 ///
-/// ## Panics
+/// # Panics
 ///
 /// Panics if the environment indicates that there are already at least 16
 /// levels of fork nesting.
@@ -86,7 +88,7 @@ fn supervise_child(child: Child) {
 /// the current executable.
 ///
 /// Panics if any argument to the current process is not valid UTF-8.
-pub fn fork<F, T>(fork_id: &str, test_name: &str, test: F) -> Result<()>
+pub fn fork<F, T>(fork_id: &str, test_name: &str, test: F) -> Result<ExitCode>
 where
     // NB: We use `Fn` here, because `FnMut` and `FnOnce` would allow
     //     for modification of captured variables, but that will not
@@ -110,7 +112,12 @@ where
 /// This function is similar to [`fork`], except that it allows for data
 /// exchange with the child process.
 #[expect(clippy::panic_in_result_fn, clippy::unwrap_in_result)]
-pub fn fork_in_out<F, T>(fork_id: &str, test_name: &str, test: F, data: &mut [u8]) -> Result<()>
+pub fn fork_in_out<F, T>(
+    fork_id: &str,
+    test_name: &str,
+    test: F,
+    data: &mut [u8],
+) -> Result<ExitCode>
 where
     F: Fn(&mut [u8]) -> T,
     T: Termination,
@@ -257,14 +264,16 @@ mod test {
 
     #[test]
     fn fork_basically_works() {
-        fork_int(
+        let status = fork_int(
             "fork::test::fork_basically_works",
             fork_id!(),
             |_| (),
             supervise_child,
             || println!("hello from child"),
         )
-        .unwrap()
+        .unwrap();
+
+        assert_eq!(status, ExitCode::SUCCESS);
     }
 
     #[test]
@@ -295,11 +304,11 @@ mod test {
             "fork::test::child_aborted_if_panics",
             fork_id!(),
             |_| (),
-            |mut child| child.wait().unwrap(),
+            |mut child| child.wait().unwrap().code().unwrap(),
             || panic!("testing a panic, nothing to see here"),
         )
         .unwrap();
-        assert_eq!(70, status.code().unwrap());
+        assert_eq!(status, 70);
     }
 
     /// Check that we can exchange data with the child process.
@@ -307,7 +316,7 @@ mod test {
     fn data_exchange() {
         let mut data = [1, 2, 3, 4, 5];
 
-        let () = fork_in_out(
+        let status = fork_in_out(
             fork_id!(),
             "fork::test::data_exchange",
             |data| {
@@ -319,5 +328,6 @@ mod test {
         .unwrap();
 
         assert_eq!(data, [2, 3, 4, 5, 6]);
+        assert_eq!(status, ExitCode::SUCCESS);
     }
 }
