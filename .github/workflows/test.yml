@@ -41,7 +41,7 @@ jobs:
     - uses: dtolnay/rust-toolchain@nightly
     - uses: Swatinem/rust-cache@v2
     - name: Build & test
-      run: cargo bench --test=unstable --features=unstable,unsound
+      run: cargo test --test=unstable --features=unstable,unsound
   build-minimum:
     name: Build using minimum versions of dependencies
     runs-on: ubuntu-latest
