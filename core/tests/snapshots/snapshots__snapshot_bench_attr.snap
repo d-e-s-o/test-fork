@@ -1,0 +1,26 @@
+---
+source: core/tests/snapshots.rs
+expression: output
+---
+#[::core::prelude::v1::bench]
+fn bench_it(b: &mut Bencher) {
+    fn body_fn(b: &mut Bencher) {
+        let () = b.iter(|| 2 + 2);
+    }
+    use ::std::mem::size_of;
+    use ::std::mem::transmute;
+    type BencherBuf = [u8; size_of::<Bencher>()];
+    let buf_ref = unsafe { transmute::<&mut Bencher, &mut BencherBuf>(b) };
+    fn wrapper_fn(buf_ref: &mut [u8]) {
+        let buf_ref = <&mut BencherBuf>::try_from(buf_ref).unwrap();
+        let bench_ref = unsafe { transmute::<&mut BencherBuf, &mut Bencher>(buf_ref) };
+        let () = body_fn(bench_ref);
+    }
+    ::test_fork::test_fork_core::fork_in_out(
+            ::test_fork::test_fork_core::fork_id!(),
+            ::test_fork::test_fork_core::fork_test_name!(bench_it),
+            wrapper_fn as fn(&mut [u8]) -> _,
+            buf_ref,
+        )
+        .expect("forking test failed")
+}
