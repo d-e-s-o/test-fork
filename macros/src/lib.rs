@@ -70,17 +70,7 @@ impl Kind {
 pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
 
-    let has_test = input_fn
-        .attrs
-        .iter()
-        .any(|attr| is_attribute_kind(Kind::Test, attr));
-    let inner_test = if has_test {
-        quote! {}
-    } else {
-        quote! { #[::core::prelude::v1::test] }
-    };
-
-    try_test_inner(attr, input_fn, inner_test)
+    try_test(attr, input_fn)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
@@ -112,17 +102,7 @@ pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn bench(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
 
-    let has_bench = input_fn
-        .attrs
-        .iter()
-        .any(|attr| is_attribute_kind(Kind::Bench, attr));
-    let inner_bench = if has_bench {
-        quote! {}
-    } else {
-        quote! { #[::core::prelude::v1::bench] }
-    };
-
-    try_bench_inner(attr, input_fn, inner_bench)
+    try_bench(attr, input_fn)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
@@ -228,6 +208,21 @@ fn is_attribute_kind(kind: Kind, attr: &Attribute) -> bool {
     })
 }
 
+
+fn try_test(attr: TokenStream, input_fn: ItemFn) -> Result<Tokens> {
+    let has_test = input_fn
+        .attrs
+        .iter()
+        .any(|attr| is_attribute_kind(Kind::Test, attr));
+    let inner_test = if has_test {
+        quote! {}
+    } else {
+        quote! { #[::core::prelude::v1::test] }
+    };
+
+    try_test_inner(attr, input_fn, inner_test)
+}
+
 fn try_test_inner(attr: TokenStream, input_fn: ItemFn, inner_test: Tokens) -> Result<Tokens> {
     if !attr.is_empty() {
         return Err(Error::new_spanned(
@@ -283,6 +278,21 @@ fn parse_bench_sig(sig: &Signature) -> Option<(Pat, Type)> {
     } else {
         None
     }
+}
+
+#[cfg(all(feature = "unstable", feature = "unsound"))]
+fn try_bench(attr: TokenStream, input_fn: ItemFn) -> Result<Tokens> {
+    let has_bench = input_fn
+        .attrs
+        .iter()
+        .any(|attr| is_attribute_kind(Kind::Bench, attr));
+    let inner_bench = if has_bench {
+        quote! {}
+    } else {
+        quote! { #[::core::prelude::v1::bench] }
+    };
+
+    try_bench_inner(attr, input_fn, inner_bench)
 }
 
 fn try_bench_inner(attr: TokenStream, input_fn: ItemFn, inner_bench: Tokens) -> Result<Tokens> {
