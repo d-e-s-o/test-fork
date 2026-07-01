@@ -294,6 +294,8 @@ fn fork_impl<T: Termination, R>(
 mod test {
     use super::*;
 
+    use std::process::abort;
+
 
     fn wait_for_child_output(child: Child) -> String {
         let output = child.wait_with_output().expect("failed to wait for child");
@@ -349,6 +351,21 @@ mod test {
         )
         .unwrap();
         assert_eq!(70, status.code().unwrap());
+    }
+
+    /// Check that a child aborting is reported as a failure by
+    /// `supervise_child`.
+    #[test]
+    fn child_failure_reported() {
+        let status = fork_int::<_, _, _, _, ()>(
+            "fork::test::child_failure_reported",
+            fork_id!(),
+            |_| (),
+            supervise_child,
+            || abort(),
+        )
+        .unwrap();
+        assert_eq!(status, ExitCode::FAILURE);
     }
 
     /// Check that we can exchange data with the child process.
