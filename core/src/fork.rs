@@ -177,7 +177,6 @@ where
 {
     // Erase the generics so we don't instantiate the actual implementation for
     // every single test
-    let mut return_value = None;
     let mut process_modifier = Some(process_modifier);
     let mut in_parent = Some(in_parent);
     let mut in_child = Some(in_child);
@@ -186,20 +185,19 @@ where
         test_name,
         fork_id,
         &mut |cmd| process_modifier.take().unwrap()(cmd),
-        &mut |child| return_value = Some(in_parent.take().unwrap()(child)),
+        &mut |child| in_parent.take().unwrap()(child),
         &mut || in_child.take().unwrap()(),
     )
-    .map(|()| return_value.unwrap())
 }
 
 #[expect(clippy::panic_in_result_fn, clippy::unwrap_in_result)]
-fn fork_impl<T: Termination>(
+fn fork_impl<T: Termination, R>(
     test_name: &str,
     fork_id: &str,
     process_modifier: &mut dyn FnMut(&mut process::Command),
-    in_parent: &mut dyn FnMut(Child),
+    in_parent: &mut dyn FnMut(Child) -> R,
     in_child: &mut dyn FnMut() -> T,
-) -> Result<()> {
+) -> Result<R> {
     let mut occurs = env::var(OCCURS_ENV).unwrap_or_else(|_| String::new());
     if occurs.contains(fork_id) {
         match panic::catch_unwind(panic::AssertUnwindSafe(in_child)) {
@@ -238,9 +236,9 @@ fn fork_impl<T: Termination>(
         process_modifier(&mut command);
 
         let child = command.spawn()?;
-        let () = in_parent(child);
+        let result = in_parent(child);
 
-        Ok(())
+        Ok(result)
     }
 }
 
