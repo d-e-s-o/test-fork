@@ -1,0 +1,17 @@
+---
+source: core/tests/snapshots.rs
+expression: output
+---
+#[::core::prelude::v1::test]
+fn it_works() {
+    fn body_fn() -> Result<(), &'static str> {
+        assert_eq!(2 + 2, 4);
+        Ok(())
+    }
+    ::test_fork::test_fork_core::fork(
+            ::test_fork::test_fork_core::fork_id!(),
+            ::test_fork::test_fork_core::fork_test_name!(it_works),
+            body_fn as fn() -> _,
+        )
+        .expect("forking test failed")
+}

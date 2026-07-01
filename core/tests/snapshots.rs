@@ -71,6 +71,20 @@ fn snapshot_test_attr() {
     assert_snapshot!(output);
 }
 
+/// Check expansion of a `#[test_fork::test]` test that returns a
+/// `Result`.
+#[test]
+fn snapshot_test_result() {
+    let output = expand(parse_quote! {
+        #[test_fork::test]
+        fn it_works() -> Result<(), &'static str> {
+            assert_eq!(2 + 2, 4);
+            Ok(())
+        }
+    });
+    assert_snapshot!(output);
+}
+
 /// Check expansion of a plain `#[test_fork::fork]` test.
 #[test]
 fn snapshot_fork_attr() {
