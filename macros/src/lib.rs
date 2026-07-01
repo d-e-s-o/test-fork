@@ -144,35 +144,9 @@ pub fn fork(attr: TokenStream, item: TokenStream) -> TokenStream {
     let supports_bench = cfg!(all(feature = "unstable", feature = "unsound"));
     let input_fn = parse_macro_input!(item as ItemFn);
 
-    let has_test = input_fn
-        .attrs
-        .iter()
-        .any(|attr| is_attribute_kind(Kind::Test, attr));
-    let has_bench = supports_bench
-        && input_fn
-            .attrs
-            .iter()
-            .any(|attr| is_attribute_kind(Kind::Bench, attr));
-
-    let inner_attr = quote! {};
-    if has_test {
-        try_test_inner(attr, input_fn, inner_attr)
-    } else if has_bench {
-        try_bench_inner(attr, input_fn, inner_attr)
-    } else {
-        let inner_attr = if parse_bench_sig(&input_fn.sig).is_some() {
-            "#[bench]"
-        } else {
-            "#[test]"
-        };
-
-        Err(Error::new_spanned(
-            Tokens::from(attr),
-            format!("test_fork::fork requires an inner {inner_attr} attribute"),
-        ))
-    }
-    .unwrap_or_else(syn::Error::into_compile_error)
-    .into()
+    try_fork(attr, input_fn, supports_bench)
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
 }
 
 
@@ -361,4 +335,34 @@ fn try_bench_inner(attr: TokenStream, input_fn: ItemFn, inner_bench: Tokens) -> 
     };
 
     Ok(augmented_bench)
+}
+
+fn try_fork(attr: TokenStream, input_fn: ItemFn, supports_bench: bool) -> Result<Tokens> {
+    let has_test = input_fn
+        .attrs
+        .iter()
+        .any(|attr| is_attribute_kind(Kind::Test, attr));
+    let has_bench = supports_bench
+        && input_fn
+            .attrs
+            .iter()
+            .any(|attr| is_attribute_kind(Kind::Bench, attr));
+
+    let inner_attr = quote! {};
+    if has_test {
+        try_test_inner(attr, input_fn, inner_attr)
+    } else if has_bench {
+        try_bench_inner(attr, input_fn, inner_attr)
+    } else {
+        let inner_attr = if parse_bench_sig(&input_fn.sig).is_some() {
+            "#[bench]"
+        } else {
+            "#[test]"
+        };
+
+        Err(Error::new_spanned(
+            Tokens::from(attr),
+            format!("test_fork::fork requires an inner {inner_attr} attribute"),
+        ))
+    }
 }
