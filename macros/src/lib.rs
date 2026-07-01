@@ -80,7 +80,7 @@ pub fn test(attr: TokenStream, item: TokenStream) -> TokenStream {
         quote! { #[::core::prelude::v1::test] }
     };
 
-    try_test(attr, input_fn, inner_test)
+    try_test_inner(attr, input_fn, inner_test)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
@@ -122,7 +122,7 @@ pub fn bench(attr: TokenStream, item: TokenStream) -> TokenStream {
         quote! { #[::core::prelude::v1::bench] }
     };
 
-    try_bench(attr, input_fn, inner_bench)
+    try_bench_inner(attr, input_fn, inner_bench)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
@@ -176,9 +176,9 @@ pub fn fork(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let inner_attr = quote! {};
     if has_test {
-        try_test(attr, input_fn, inner_attr)
+        try_test_inner(attr, input_fn, inner_attr)
     } else if has_bench {
-        try_bench(attr, input_fn, inner_attr)
+        try_bench_inner(attr, input_fn, inner_attr)
     } else {
         let inner_attr = if parse_bench_sig(&input_fn.sig).is_some() {
             "#[bench]"
@@ -228,7 +228,7 @@ fn is_attribute_kind(kind: Kind, attr: &Attribute) -> bool {
     })
 }
 
-fn try_test(attr: TokenStream, input_fn: ItemFn, inner_test: Tokens) -> Result<Tokens> {
+fn try_test_inner(attr: TokenStream, input_fn: ItemFn, inner_test: Tokens) -> Result<Tokens> {
     if !attr.is_empty() {
         return Err(Error::new_spanned(
             Tokens::from(attr),
@@ -285,7 +285,7 @@ fn parse_bench_sig(sig: &Signature) -> Option<(Pat, Type)> {
     }
 }
 
-fn try_bench(attr: TokenStream, input_fn: ItemFn, inner_bench: Tokens) -> Result<Tokens> {
+fn try_bench_inner(attr: TokenStream, input_fn: ItemFn, inner_bench: Tokens) -> Result<Tokens> {
     if !attr.is_empty() {
         return Err(Error::new_spanned(
             Tokens::from(attr),
