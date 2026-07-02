@@ -1,3 +1,9 @@
+Unreleased
+----------
+- Improved `#[should_panic]` attribute handling and added support for
+  `expected = "..."` argument
+
+
 0.1.4
 -----
 - Fixed deadlock for tests with excessive output

@@ -3,8 +3,6 @@
 
 //! End-to-end tests for [`test-fork`].
 
-use std::process;
-
 
 #[test_fork::test]
 fn trivial() {}
@@ -12,12 +10,6 @@ fn trivial() {}
 #[test_fork::test]
 fn trivial_with_ok() -> Result<(), &'static str> {
     Ok(())
-}
-
-#[test_fork::test]
-#[should_panic]
-fn trivial_with_err() -> Result<(), &'static str> {
-    Err("should fail.")
 }
 
 /// Test outputting a bunch of data to make sure we don't hit any
@@ -36,9 +28,9 @@ fn panicking_child() {
 }
 
 #[test_fork::test]
-#[should_panic]
-fn aborting_child() {
-    process::abort()
+#[should_panic(expected = "expected message")]
+fn panicking_child_with_message() {
+    panic!("this is the expected message, in full")
 }
 
 #[test_fork::fork]

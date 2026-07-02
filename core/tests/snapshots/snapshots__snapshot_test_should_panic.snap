@@ -1,0 +1,24 @@
+---
+source: core/tests/snapshots.rs
+expression: output
+---
+#[::core::prelude::v1::test]
+fn it_panics() {
+    fn body_fn() {
+        panic!("boom");
+    }
+    ::test_fork::test_fork_core::fork(
+            ::test_fork::test_fork_core::fork_id!(),
+            ::test_fork::test_fork_core::fork_test_name!(it_panics),
+            {
+                fn should_panic_fn() {
+                    ::test_fork::test_fork_core::run_should_panic(
+                        body_fn,
+                        ::std::option::Option::None,
+                    )
+                }
+                should_panic_fn
+            } as fn() -> _,
+        )
+        .expect("forking test failed")
+}

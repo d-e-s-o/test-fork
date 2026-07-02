@@ -14,6 +14,7 @@ use syn::Attribute;
 use syn::Error;
 use syn::FnArg;
 use syn::ItemFn;
+use syn::LitStr;
 use syn::Pat;
 use syn::Result;
 use syn::ReturnType;
@@ -71,6 +72,41 @@ fn is_attribute_kind(kind: Kind, attr: &Attribute) -> bool {
 }
 
 
+/// Check whether the given attribute is a `#[should_panic]` attribute, in
+/// either its bare form or its `#[should_panic(expected = "...")]` form.
+fn is_should_panic(attr: &Attribute) -> bool {
+    match &attr.meta {
+        syn::Meta::Path(path) => path.is_ident("should_panic"),
+        syn::Meta::List(list) => list.path.is_ident("should_panic"),
+        syn::Meta::NameValue(_) => false,
+    }
+}
+
+
+/// Extract the `expected` string from a `#[should_panic(expected = "...")]`
+/// attribute.
+///
+/// Return `None` for a bare `#[should_panic]` or if the argument
+/// cannot be parsed.
+fn should_panic_expected(attr: &Attribute) -> Option<String> {
+    if !matches!(attr.meta, syn::Meta::List(_)) {
+        return None
+    }
+
+    let mut expected = None;
+    let result = attr.parse_nested_meta(|meta| {
+        if meta.path.is_ident("expected") {
+            expected = Some(meta.value()?.parse::<LitStr>()?.value());
+        }
+        Ok(())
+    });
+    if result.is_err() {
+        return None
+    }
+    expected
+}
+
+
 /// Testable implementation of the `#[test]` attribute's core logic.
 pub fn try_test(attr: Tokens, input_fn: ItemFn) -> Result<Tokens> {
     let has_test = input_fn
@@ -95,7 +131,7 @@ fn try_test_inner(attr: Tokens, input_fn: ItemFn, inner_test: Tokens) -> Result<
     }
 
     let ItemFn {
-        attrs,
+        mut attrs,
         vis,
         mut sig,
         block,
@@ -109,6 +145,31 @@ fn try_test_inner(attr: Tokens, input_fn: ItemFn, inner_test: Tokens) -> Result<
     // process.
     sig.output = ReturnType::Default;
 
+    // Handle `#[should_panic]` ourselves, inside the forked child (the
+    // only place where the test body actually runs). We strip the
+    // attribute so that libtest does not additionally act on it, and let
+    // `run_should_panic` map a panic to success and its absence to
+    // failure.
+    let should_panic = attrs
+        .iter()
+        .position(is_should_panic)
+        .map(|index| attrs.remove(index));
+
+    let test_fn = if let Some(should_panic) = should_panic {
+        let expected = match should_panic_expected(&should_panic) {
+            Some(expected) => quote! { ::std::option::Option::Some(#expected) },
+            None => quote! { ::std::option::Option::None },
+        };
+        quote! {{
+            fn should_panic_fn() {
+                ::test_fork::test_fork_core::run_should_panic(body_fn, #expected)
+            }
+            should_panic_fn
+        }}
+    } else {
+        quote! { body_fn }
+    };
+
     let augmented_test = quote! {
         #inner_test
         #(#attrs)*
@@ -119,7 +180,7 @@ fn try_test_inner(attr: Tokens, input_fn: ItemFn, inner_test: Tokens) -> Result<
             ::test_fork::test_fork_core::fork(
                 ::test_fork::test_fork_core::fork_id!(),
                 ::test_fork::test_fork_core::fork_test_name!(#test_name),
-                body_fn as fn() -> _,
+                #test_fn as fn() -> _,
             ).expect("forking test failed")
         }
     };

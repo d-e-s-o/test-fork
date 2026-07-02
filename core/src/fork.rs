@@ -15,7 +15,9 @@ use std::io::Read;
 use std::io::Write as _;
 use std::net::TcpListener;
 use std::net::TcpStream;
-use std::panic;
+use std::panic::catch_unwind;
+use std::panic::AssertUnwindSafe;
+use std::panic::UnwindSafe;
 use std::process;
 use std::process::Child;
 use std::process::Command;
@@ -50,6 +52,41 @@ fn supervise_child(child: Child) {
     if !output.stderr.is_empty() {
         let s = String::from_utf8_lossy(&output.stderr);
         eprint!("{s}");
+    }
+}
+
+
+/// Run the body of a `#[should_panic]` test.
+///
+/// The body is expected to panic. If it does (and if the expected string
+/// is found in the panic message), the function suppresses said panic
+/// and succeeds. Otherwise it panics itself.
+pub fn run_should_panic<F, T>(test: F, expected: Option<&str>)
+where
+    F: FnOnce() -> T + UnwindSafe,
+{
+    let payload = match catch_unwind(test) {
+        Ok(_) => {
+            panic!("note: test did not panic as expected");
+        }
+        Err(payload) => payload,
+    };
+
+    let expected = match expected {
+        Some(expected) => expected,
+        // A bare `#[should_panic]` accepts any panic.
+        None => return,
+    };
+
+    let message = payload
+        .downcast_ref::<&str>()
+        .copied()
+        .or_else(|| payload.downcast_ref::<String>().map(String::as_str));
+    match message {
+        Some(message) if message.contains(expected) => (),
+        _ => {
+            panic!("note: panic did not contain the expected string '{expected}'")
+        }
     }
 }
 
@@ -200,7 +237,7 @@ fn fork_impl<T: Termination, R>(
 ) -> Result<R> {
     let mut occurs = env::var(OCCURS_ENV).unwrap_or_else(|_| String::new());
     if occurs.contains(fork_id) {
-        match panic::catch_unwind(panic::AssertUnwindSafe(in_child)) {
+        match catch_unwind(AssertUnwindSafe(in_child)) {
             Ok(test_result) => {
                 let rc = if test_result.report() == ExitCode::SUCCESS {
                     0
@@ -319,5 +356,35 @@ mod test {
         .unwrap();
 
         assert_eq!(data, [2, 3, 4, 5, 6]);
+    }
+
+    /// Check that [`run_should_panic`] correctly handles a test
+    /// panicking.
+    #[test]
+    fn run_should_panic_accepts_panic() {
+        run_should_panic(|| panic!("boom"), None)
+    }
+
+    /// Make sure that [`run_should_panic`] correctly handles a test not
+    /// panicking.
+    #[test]
+    #[should_panic(expected = "test did not panic as expected")]
+    fn run_should_panic_rejects_missing_panic() {
+        run_should_panic(|| {}, None);
+    }
+
+    /// Test that [`run_should_panic`] correctly handles a matching
+    /// "expected" message.
+    #[test]
+    fn run_should_panic_accepts_expected_message() {
+        run_should_panic(|| panic!("a boom occurred"), Some("boom"))
+    }
+
+    /// Ensure that [`run_should_panic`] correctly handles a mismatching
+    /// "expected" message.
+    #[test]
+    #[should_panic(expected = "panic did not contain the expected string")]
+    fn run_should_panic_rejects_unexpected_message() {
+        run_should_panic(|| panic!("something else"), Some("boom"))
     }
 }

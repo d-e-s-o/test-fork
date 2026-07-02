@@ -85,6 +85,34 @@ fn snapshot_test_result() {
     assert_snapshot!(output);
 }
 
+/// Check expansion of a `#[test_fork::test]` test that is additionally
+/// annotated with `#[should_panic]`.
+#[test]
+fn snapshot_test_should_panic() {
+    let output = expand(parse_quote! {
+        #[test_fork::test]
+        #[should_panic]
+        fn it_panics() {
+            panic!("boom");
+        }
+    });
+    assert_snapshot!(output);
+}
+
+/// Check expansion of a `#[test_fork::test]` test annotated with
+/// `#[should_panic(expected = "...")]`.
+#[test]
+fn snapshot_test_should_panic_expected() {
+    let output = expand(parse_quote! {
+        #[test_fork::test]
+        #[should_panic(expected = "boom")]
+        fn it_panics() {
+            panic!("boom");
+        }
+    });
+    assert_snapshot!(output);
+}
+
 /// Check expansion of a plain `#[test_fork::fork]` test.
 #[test]
 fn snapshot_fork_attr() {
