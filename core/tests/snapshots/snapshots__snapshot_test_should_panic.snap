@@ -3,7 +3,7 @@ source: core/tests/snapshots.rs
 expression: output
 ---
 #[::core::prelude::v1::test]
-fn it_panics() {
+fn it_panics() -> ::std::process::ExitCode {
     fn body_fn() {
         panic!("boom");
     }
@@ -11,7 +11,7 @@ fn it_panics() {
             ::test_fork::test_fork_core::fork_id!(),
             ::test_fork::test_fork_core::fork_test_name!(it_panics),
             {
-                fn should_panic_fn() {
+                fn should_panic_fn() -> ::std::process::ExitCode {
                     ::test_fork::test_fork_core::run_should_panic(
                         body_fn,
                         ::std::option::Option::None,

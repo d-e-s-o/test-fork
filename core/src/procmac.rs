@@ -10,6 +10,7 @@ use proc_macro2::TokenStream as Tokens;
 use quote::quote;
 use quote::ToTokens as _;
 
+use syn::parse_quote;
 use syn::Attribute;
 use syn::Error;
 use syn::FnArg;
@@ -17,7 +18,6 @@ use syn::ItemFn;
 use syn::LitStr;
 use syn::Pat;
 use syn::Result;
-use syn::ReturnType;
 use syn::Signature;
 use syn::Type;
 
@@ -140,10 +140,12 @@ fn try_test_inner(attr: Tokens, input_fn: ItemFn, inner_test: Tokens) -> Result<
     let test_name = sig.ident.clone();
     let mut body_fn_sig = sig.clone();
     body_fn_sig.ident = Ident::new("body_fn", Span::call_site());
-    // Our tests currently basically have to return (), because we don't
-    // have a good way of conveying the result back from the child
-    // process.
-    sig.output = ReturnType::Default;
+    // Our test "shims" map the actual test's success/failure onto a mere
+    // `ExitCode`. This way, we introduce the least perturbance compared
+    // to, say, `std::process::exit` or `panic`, both of which would be
+    // caught by libtest's harness and result in additional output
+    // (confusing error messages or additional backtraces, respectively).
+    sig.output = parse_quote!(-> ::std::process::ExitCode);
 
     // Handle `#[should_panic]` ourselves, inside the forked child (the
     // only place where the test body actually runs). We strip the
@@ -161,7 +163,7 @@ fn try_test_inner(attr: Tokens, input_fn: ItemFn, inner_test: Tokens) -> Result<
             None => quote! { ::std::option::Option::None },
         };
         quote! {{
-            fn should_panic_fn() {
+            fn should_panic_fn() -> ::std::process::ExitCode {
                 ::test_fork::test_fork_core::run_should_panic(body_fn, #expected)
             }
             should_panic_fn
@@ -244,7 +246,7 @@ fn try_bench_inner(attr: Tokens, input_fn: ItemFn, inner_bench: Tokens) -> Resul
     let test_name = sig.ident.clone();
     let mut body_fn_sig = sig.clone();
     body_fn_sig.ident = Ident::new("body_fn", Span::call_site());
-    sig.output = ReturnType::Default;
+    sig.output = parse_quote!(-> ::std::process::ExitCode);
 
     let augmented_bench = quote! {
         #inner_bench
