@@ -1,6 +1,6 @@
-Unreleased
-----------
-- Improved output on inner test failure
+0.1.5
+-----
+- Improved error reporting/output on inner test failure
 - Improved `#[should_panic]` attribute handling and added support for
   `expected = "..."` argument
 
