@@ -4,7 +4,7 @@
 //! The procedural macro powering `test-fork`.
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
-
+#![doc(hidden)]
 
 use proc_macro::TokenStream;
 

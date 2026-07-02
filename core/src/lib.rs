@@ -12,6 +12,8 @@
 
 //! Supporting crate for `test-fork`.
 
+#![doc(hidden)]
+
 #[macro_use]
 mod sugar;
 #[macro_use]
@@ -24,7 +26,6 @@ mod procmac;
 pub use crate::fork::fork;
 pub use crate::fork::fork_in_out;
 pub use crate::fork::run_should_panic;
-#[doc(hidden)]
 pub use crate::fork_test::fix_module_path;
 pub use crate::sugar::ForkId;
 

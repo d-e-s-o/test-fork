@@ -26,6 +26,7 @@ use std::hash::Hasher;
 /// [`fork`][crate::fork()].
 ///
 /// The type of the expression this macro expands to is [`ForkId`].
+#[doc(hidden)]
 #[macro_export]
 macro_rules! fork_id {
     () => {{
@@ -40,7 +41,6 @@ macro_rules! fork_id {
 pub struct ForkId(TypeId);
 
 impl ForkId {
-    #[doc(hidden)]
     pub fn of(id: TypeId) -> Self {
         Self(id)
     }

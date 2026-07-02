@@ -14,6 +14,7 @@
 /// Given the unqualified name of a `#[test]` function, produce a
 /// `&'static str` corresponding to the name of the test as filtered by the
 /// standard test harness.
+#[doc(hidden)]
 #[macro_export]
 macro_rules! fork_test_name {
     ($function_name:ident) => {
