@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Updated `syn` dependency to `3`
+
+
 0.1.5
 -----
 - Improved error reporting/output on inner test failure
