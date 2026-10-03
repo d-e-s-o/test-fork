@@ -5,6 +5,8 @@ error[E0594]: cannot assign to `x`, as it is a captured variable in a `Fn` closu
    |         ----- `x` declared here, outside the closure
 14 |
 15 |     let status = fork(fork_id!(), "env_mut_capture", || {
-   |                                                      -- in this closure
+   |                  ----                                -- in this closure
+   |                  |
+   |                  expects `Fn` instead of `FnMut`
 16 |         x += 1;
    |         ^^^^^^ cannot assign
