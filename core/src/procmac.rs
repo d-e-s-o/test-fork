@@ -135,6 +135,7 @@ fn try_test_inner(attr: Tokens, input_fn: ItemFn, inner_test: Tokens) -> Result<
         vis,
         mut sig,
         block,
+        modifiers: _,
     } = input_fn;
 
     let test_name = sig.ident.clone();
@@ -234,6 +235,7 @@ fn try_bench_inner(attr: Tokens, input_fn: ItemFn, inner_bench: Tokens) -> Resul
         vis,
         mut sig,
         block,
+        modifiers: _,
     } = input_fn;
 
     let (bencher_name, bencher_ty) = parse_bench_sig(&sig).ok_or_else(|| {
