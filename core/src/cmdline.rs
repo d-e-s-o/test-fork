@@ -33,9 +33,11 @@ enum FlagType {
     Error(&'static str),
 }
 
+static NO_CAPTURE: &str = "--no-capture";
+// Deprecated alias for `--no-capture`.
 static NOCAPTURE: &str = "--nocapture";
 
-/// Table of all flags in the 2020-05-26 nightly build.
+/// Table of all known flags.
 ///
 /// A number of these that affect output are dropped because we append our own
 /// options.
@@ -58,6 +60,7 @@ static KNOWN_FLAGS: &[(&str, FlagType)] = &[
         FlagType::Error("Tests run but --list passed to process?"),
     ),
     ("--logfile", FlagType::Drop(true)),
+    (NO_CAPTURE, FlagType::Drop(true)),
     (NOCAPTURE, FlagType::Drop(true)),
     ("--quiet", FlagType::Drop(false)),
     ("--report-time", FlagType::Drop(true)),
@@ -122,12 +125,12 @@ fn look_up_flag_or_err(flag: &str) -> Result<(bool, bool)> {
 }
 
 
-/// Check whether the `--nocapture` argument is present.
+/// Check whether the `--no-capture` argument is present.
 pub(crate) fn has_nocapture<A>(mut args: A) -> bool
 where
     A: Iterator<Item = String>,
 {
-    args.any(|arg| arg == NOCAPTURE)
+    args.any(|arg| arg == NO_CAPTURE || arg == NOCAPTURE)
 }
 
 
