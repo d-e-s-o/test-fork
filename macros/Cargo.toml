@@ -20,7 +20,7 @@ unsound = []
 
 [dependencies]
 syn = { version = "3.0", default-features = false, features = ["clone-impls", "full", "parsing", "printing", "proc-macro"] }
-test-fork-core = { version = "=0.1.5", path = "../core" }
+test-fork-core = { version = "=0.1.6", path = "../core" }
 
 [lints]
 workspace = true

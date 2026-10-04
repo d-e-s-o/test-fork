@@ -1,5 +1,5 @@
-Unreleased
-----------
+0.1.6
+-----
 - Updated `syn` dependency to `3`
 
 
