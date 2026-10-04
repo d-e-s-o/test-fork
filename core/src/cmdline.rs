@@ -10,7 +10,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! Internal module which parses and modifies the rust test command-line.
+//! Internal module which parses and modifies the Rust test command-line.
+//!
+//! Note that Rust tests also honor various environment variables (e.g.,
+//! `RUST_TEST_NOCAPTURE`), but those are deprecated and we don't
+//! support them.
 
 use std::env;
 

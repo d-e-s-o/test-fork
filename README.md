@@ -9,11 +9,11 @@ test-fork
 - [Documentation][docs-rs]
 - [Changelog](CHANGELOG.md)
 
-Custom attributes making sure a test is run in a separate process.
+Custom attributes for making sure tests are run in separate processes.
 Process separation can be useful in many contexts, including when
 testing interactions with necessarily process-global state (e.g., when
-working environment variables, when testing code that requires temporary
-user ID switching, or when adjusting the working directory).
+working with environment variables, when testing code that requires
+temporary user ID switching, or when adjusting the working directory).
 
 Usage
 -----
@@ -60,11 +60,11 @@ async fn test3() {
 #### Benchmarks
 The crate also supports running `libtest` style benchmarks in a separate
 process. This functionality is available only when both the `unstable`
-and `unsound` features are enabled. The functionality is unstable
-because `libtest` benchmarks are unstable and only available on nightly.
-It is potentially unsound because the implementation necessarily needs
-to transfer `Bencher` objects across process boundaries, but said
-objects don't offer a stable ABI.
+and `unsound` features are enabled. It is unstable because `libtest`
+benchmarks are unstable and only available on nightly. It is potentially
+unsound because the implementation necessarily needs to transfer
+`Bencher` objects across process boundaries, but said objects don't
+offer a stable ABI.
 
 ```rust
 use test_fork::bench;
