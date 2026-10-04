@@ -33,6 +33,8 @@ enum FlagType {
     Error(&'static str),
 }
 
+static NOCAPTURE: &str = "--nocapture";
+
 /// Table of all flags in the 2020-05-26 nightly build.
 ///
 /// A number of these that affect output are dropped because we append our own
@@ -56,7 +58,7 @@ static KNOWN_FLAGS: &[(&str, FlagType)] = &[
         FlagType::Error("Tests run but --list passed to process?"),
     ),
     ("--logfile", FlagType::Drop(true)),
-    ("--nocapture", FlagType::Drop(true)),
+    (NOCAPTURE, FlagType::Drop(true)),
     ("--quiet", FlagType::Drop(false)),
     ("--report-time", FlagType::Drop(true)),
     ("--show-output", FlagType::Pass(false)),
@@ -77,7 +79,7 @@ fn look_up_flag_from_table(flag: &str) -> Option<FlagType> {
         .next()
 }
 
-pub(crate) fn env_var_for_flag(flag: &str) -> String {
+fn env_var_for_flag(flag: &str) -> String {
     let mut var = "TEST_FORK_FLAG_".to_owned();
     var.push_str(
         &flag
@@ -118,6 +120,16 @@ fn look_up_flag_or_err(flag: &str) -> Result<(bool, bool)> {
         Some(FlagType::Drop(has_arg)) => Ok((false, has_arg)),
     }
 }
+
+
+/// Check whether the `--nocapture` argument is present.
+pub(crate) fn has_nocapture<A>(mut args: A) -> bool
+where
+    A: Iterator<Item = String>,
+{
+    args.any(|arg| arg == NOCAPTURE)
+}
+
 
 /// Parse the full command line as would be given to the Rust test harness, and
 /// strip out any flags that should be dropped as well as all filters. The

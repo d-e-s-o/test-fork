@@ -268,8 +268,14 @@ fn fork_impl<T: Termination, R>(
         if occurs.len() > 16 * OCCURS_TERM_LENGTH {
             panic!("test-fork: Not forking due to >=16 levels of recursion");
         }
-
         occurs.push_str(fork_id);
+
+        let (stdout, stderr) = if cmdline::has_nocapture(env::args()) {
+            (Stdio::inherit(), Stdio::inherit())
+        } else {
+            (Stdio::piped(), Stdio::piped())
+        };
+
         let mut command =
             process::Command::new(env::current_exe().expect("current_exe() failed, cannot fork"));
         command
@@ -278,8 +284,8 @@ fn fork_impl<T: Termination, R>(
             .arg(test_name)
             .env(OCCURS_ENV, &occurs)
             .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+            .stdout(stdout)
+            .stderr(stderr);
         process_modifier(&mut command);
 
         let child = command.spawn()?;

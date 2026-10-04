@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Stopped buffering test output when `--nocapture` argument is present
+
+
 0.1.6
 -----
 - Updated `syn` dependency to `3`
