@@ -1,5 +1,5 @@
-Unreleased
-----------
+0.1.7
+-----
 - Added support for `--no-capture` test argument
 - Stopped buffering test output when `--nocapture` / `--no-capture`
   argument is present
